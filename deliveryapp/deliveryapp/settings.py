@@ -21,7 +21,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-$%mc73f9gx!bbif37ks3h00sc9%b$l88g(=!j)r6z=m*w)7d1-'
 
-CKEDITOR_UPLOAD_PATH = "images/lessons/"
+CKEDITOR_UPLOAD_PATH = "images/"
+MEDIA_ROOT = '%s/core/static/' % BASE_DIR
+CORS_ORIGIN_ALLOW_ALL = True
+# LOGIN_URL='/admin/login/'
+AUTH_USER_MODEL = 'core.User'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -40,7 +44,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'ckeditor',
-    'ckeditor_uploader'
+    'ckeditor_uploader',
+    'oauth2_provider',
 ]
 
 MIDDLEWARE = [
@@ -52,7 +57,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+REST_FRAMEWORK = {
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    # 'PAGE_SIZE': 2,
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    )
+}
 ROOT_URLCONF = 'deliveryapp.urls'
 
 TEMPLATES = [
@@ -124,3 +135,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+import cloudinary
+cloudinary.config(
+    cloud_name="dqpo9h5s2",
+    api_key="247473939561997",
+    api_secret="lZZWOntBPCDWEnECsmWIalOtl08",
+    secure=True
+)
+CLIENT_ID = "fD7VD9wZ4yWeRAnZZJyH6yxumWIRvC9uBNPP8ZUK"
+CLIENT_SECRET = "e3zBrheBiCzAzEkMq7bacrZ4Og8OIwmvPESD4bFBMUA1HYVMY3OwIq8jb5AXu7FqqPJD66pYGP0WC6usynWQKZXf0uorUCV5lawYi4Qo57XQHeL0qf0xZP3e4sFrBaUS"
