@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'core.middleware.ProvideClientIdAndClinetSecret',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -136,11 +137,12 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import cloudinary
+
 cloudinary.config(
     cloud_name="dqpo9h5s2",
     api_key="247473939561997",
     api_secret="lZZWOntBPCDWEnECsmWIalOtl08",
     secure=True
 )
-CLIENT_ID = "fD7VD9wZ4yWeRAnZZJyH6yxumWIRvC9uBNPP8ZUK"
-CLIENT_SECRET = "e3zBrheBiCzAzEkMq7bacrZ4Og8OIwmvPESD4bFBMUA1HYVMY3OwIq8jb5AXu7FqqPJD66pYGP0WC6usynWQKZXf0uorUCV5lawYi4Qo57XQHeL0qf0xZP3e4sFrBaUS"
+CLIENT_ID = "P55KQaP6UAxLs99r67UDZ55KNtBYaYZhRLGD6E9C"
+CLIENT_SECRET = "XfolafAYUde30L2lYdW1p4uMIhGiTWhHpmR0FDkzsB41Q6o7tXip6hJUTj8dUlUScjYd8eE9BKaZOfKW9e5MzimzfJ26Hzsd6C0T3U4lBkkIYafn2YLFNMAq8qHvZ3uM"
