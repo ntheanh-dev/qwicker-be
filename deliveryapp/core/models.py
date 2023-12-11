@@ -3,7 +3,6 @@ from django.db import models
 
 
 class BaseModel(models.Model):
-    created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=False)
 
@@ -11,8 +10,8 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class User(AbstractUser):
-    role = models.ForeignKey('Role', related_name="user", on_delete=models.CASCADE, default=3)
+class User(AbstractUser, BaseModel):
+    role = models.ForeignKey('Role', related_name="user", on_delete=models.CASCADE, default=1)
     avatar = models.ImageField()
 
     def __str__(self):

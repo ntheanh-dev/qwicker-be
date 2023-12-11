@@ -2,6 +2,7 @@ from django.http import QueryDict
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 
+
 class ProvideClientIdAndClinetSecret(MiddlewareMixin):
 
     def __init__(self, get_response):
