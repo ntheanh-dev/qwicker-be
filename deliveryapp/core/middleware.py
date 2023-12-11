@@ -1,13 +1,22 @@
+from django.http import QueryDict
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
+
 class ProvideClientIdAndClinetSecret(MiddlewareMixin):
 
-    def process_view(self, request, view_func, view_args, view_kwargs):
-        # Check if the view is a DRF login view and if it's a POST request
-        print(settings.CLIENT_ID)
-        print(settings.CLIENT_SECRET)
-        if request.path == '/o/token/' and request.method == 'POST':
-            print(request.data)
-            # Add your custom data to the request
+    def __init__(self, get_response):
+        self.get_response = get_response
 
-        return None
+    def __call__(self, request):
+        post_data = request.POST.copy()
+        post_data['client_id'] = settings.CLIENT_ID
+        post_data['client_secret'] = settings.CLIENT_SECRET
+
+        new_querydict = QueryDict('', mutable=True)
+        new_querydict.update(post_data)
+
+        request.POST = new_querydict
+
+        response = self.get_response(request)
+
+        return response
