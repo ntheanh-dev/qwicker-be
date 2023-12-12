@@ -15,7 +15,7 @@ class UserSerializer(ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'image', 'date_joined']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'image']
         extra_kwargs = {
             'password': {'write_only': True},
             'date_joined': {'read_only': True}
@@ -56,6 +56,8 @@ class ShipperSerializer(UserSerializer):
             u = Shipper(**data)
             shipper_role = Role.objects.get(name="SHIPPER")
             u.role = shipper_role
+
+            u.is_active = False
 
             result = upload(data['avatar'])
             u.avatar = result['url']
