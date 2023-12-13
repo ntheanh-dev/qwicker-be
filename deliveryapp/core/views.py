@@ -1,6 +1,9 @@
+import json
+
+from django.db import transaction
 from django.shortcuts import render
 from rest_framework import viewsets, generics, permissions, parsers, status
-from .models import User, Shipper, Role
+from .models import *
 from .serializers import *
 from rest_framework.decorators import action
 from rest_framework.views import Response
@@ -31,4 +34,24 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
 
 class RoleViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Role.objects.all()
-    serializer_class = Role
+    serializer_class = RoleSerializer
+
+
+class ProductViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    parser_classes = [parsers.MultiPartParser, ]
+
+class ProductTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = ProductType.objects.all()
+    serializer_class = ProductTypeSerializer
+
+
+class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializer
+
+
+class JobTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = JobType.objects.all()
+    serializer_class = JobTypeSerializer

@@ -56,7 +56,6 @@ class Job(BaseModel):
     poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
     winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
 
-
 class JobType(models.Model):
     name = models.CharField(max_length=50)
 

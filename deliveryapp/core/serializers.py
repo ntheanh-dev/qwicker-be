@@ -1,5 +1,6 @@
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
-from .models import User, Role, Shipper
+from .models import User, Role, Shipper, Job, JobType, Product, ProductType, Shipment, Address, Auction, Feedback, \
+    Payment, PaymentMethod
 from cloudinary.uploader import upload
 
 
@@ -74,3 +75,27 @@ class RoleSerializer(ModelSerializer):
     class Meta:
         model = Role
         fields = ['id', 'name']
+
+
+class JobSerializer(ModelSerializer):
+    class Meta:
+        model = Job
+        fields = '__all__'
+
+
+class JobTypeSerializer(ModelSerializer):
+    class Meta:
+        model = JobType
+        fields = ['name']
+
+
+class ProductSerializer(ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+
+
+class ProductTypeSerializer(ModelSerializer):
+    class Meta:
+        model = ProductType
+        fields = '__all__'
