@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 
@@ -52,7 +53,6 @@ class ProductType(models.Model):
 class Job(BaseModel):
     type = models.ForeignKey('JobType', related_name='job_type', on_delete=models.CASCADE)
     description = models.CharField(max_length=255)
-    shipment = models.ForeignKey('Shipment', related_name='job_shipment', on_delete=models.CASCADE)
     poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
     winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
 
@@ -71,10 +71,20 @@ class Auction(models.Model):
     # maybe add cost filed used for auctioning
 
 
+class Feedback(models.Model):
+    created_at = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(User, related_name='feedback_user', on_delete=models.CASCADE)
+    shipper = models.ForeignKey(Shipper, related_name='feedback_shipper', on_delete=models.CASCADE)
+    satisfaction_rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    shipper_cooperation = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    overall_rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+
+
 class Shipment(models.Model):
+    job = models.ForeignKey(Job, related_name='shipment_job', on_delete=models.CASCADE)
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
-    ready_on = models.DateTimeField()
+    ready_on = models.DateTimeField(null=True)
     collect_on = models.DateTimeField(null=True)
     delivered_on = models.DateTimeField(null=True)
     cost = models.DecimalField(max_digits=6, decimal_places=2)
@@ -87,3 +97,13 @@ class Address(models.Model):
     city = models.CharField(max_length=50)
     street = models.CharField(max_length=50)
     home_number = models.CharField(max_length=10)
+
+
+class Payment(BaseModel):
+    method = models.ForeignKey('PaymentMethod', on_delete=models.CASCADE)
+    job = models.ForeignKey(Job, related_name='payment_job', on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=6, decimal_places=2)
+
+
+class PaymentMethod(models.Model):
+    name = models.CharField(max_length=20)
