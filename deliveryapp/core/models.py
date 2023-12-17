@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-
+from cloudinary.models import CloudinaryField
 
 class BaseModel(models.Model):
     updated_at = models.DateTimeField(auto_now_add=True)
@@ -33,9 +33,6 @@ class Shipper(User):
 
 class Product(BaseModel):
     job = models.ForeignKey('Job', on_delete=models.CASCADE)
-    description = models.CharField(max_length=255)
-    type = models.ForeignKey('ProductType', on_delete=models.CASCADE)
-    image = models.ImageField()
     length = models.IntegerField(null=False)
     width = models.IntegerField(null=False)
     height = models.IntegerField(null=False)
@@ -43,21 +40,20 @@ class Product(BaseModel):
     quantity = models.IntegerField(null=False)
 
 
-class ProductType(models.Model):
+class Job(BaseModel):
+    type = models.ForeignKey('JobType', related_name='job_type', on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    # null = True when develop
+    poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE, null=True)
+    winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
+    image = models.CharField(max_length=255)
+
+
+class JobType(models.Model):
     name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
-
-
-class Job(BaseModel):
-    type = models.ForeignKey('JobType', related_name='job_type', on_delete=models.CASCADE)
-    description = models.CharField(max_length=255)
-    poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
-    winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
-
-class JobType(models.Model):
-    name = models.CharField(max_length=50)
 
 
 class Auction(models.Model):
@@ -106,3 +102,8 @@ class Payment(BaseModel):
 
 class PaymentMethod(models.Model):
     name = models.CharField(max_length=20)
+
+
+class Photo(models.Model):
+    title = models.CharField(max_length=100, null=True)
+    image = CloudinaryField('image')

@@ -1,6 +1,6 @@
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
-from .models import User, Role, Shipper, Job, JobType, Product, ProductType, Shipment, Address, Auction, Feedback, \
-    Payment, PaymentMethod
+from .models import User, Role, Shipper, Job, JobType, Product, Shipment, Address, Auction, Feedback, \
+    Payment, PaymentMethod, Photo
 from cloudinary.uploader import upload
 
 
@@ -23,7 +23,6 @@ class UserSerializer(ModelSerializer):
         }
 
     def create(self, validated_data):
-        role = type(self).__name__
         try:
             data = validated_data.copy()
             u = User(**data)
@@ -77,16 +76,17 @@ class RoleSerializer(ModelSerializer):
         fields = ['id', 'name']
 
 
-class JobSerializer(ModelSerializer):
-    class Meta:
-        model = Job
-        fields = '__all__'
-
-
 class JobTypeSerializer(ModelSerializer):
     class Meta:
         model = JobType
         fields = ['name']
+
+
+class JobSerializer(ModelSerializer):
+    type = JobTypeSerializer()
+    class Meta:
+        model = Job
+        fields = ['id', 'description', 'type', 'image', 'is_active']
 
 
 class ProductSerializer(ModelSerializer):
@@ -95,7 +95,23 @@ class ProductSerializer(ModelSerializer):
         fields = '__all__'
 
 
-class ProductTypeSerializer(ModelSerializer):
+class PhotoSerializer(ModelSerializer):
     class Meta:
-        model = ProductType
+        model = Photo
         fields = '__all__'
+
+
+class AddressSerializer(ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['id', 'contact', 'phone_number', 'country', 'city', 'street', 'home_number', ]
+
+
+class ShipmentSerializer(ModelSerializer):
+    # delivery_address = AddressSerializer()
+    # pick_up = AddressSerializer()
+
+    class Meta:
+        model = Shipment
+        fields = ['job', 'pick_up', 'delivery_address', 'ready_on', 'collect_on', 'delivered_on', 'cost',
+                  ]

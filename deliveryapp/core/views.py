@@ -1,5 +1,4 @@
 import json
-
 from django.db import transaction
 from django.shortcuts import render
 from rest_framework import viewsets, generics, permissions, parsers, status
@@ -7,6 +6,7 @@ from .models import *
 from .serializers import *
 from rest_framework.decorators import action
 from rest_framework.views import Response
+import cloudinary.uploader
 
 
 # Create your views here.
@@ -42,16 +42,105 @@ class ProductViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     parser_classes = [parsers.MultiPartParser, ]
 
-class ProductTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = ProductType.objects.all()
-    serializer_class = ProductTypeSerializer
-
 
 class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
 
+    def get_permissions(self):
+        if self.action in ['create']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
+
+    @action(methods=['post'], detail=False)
+    @transaction.atomic()
+    def post_job(self,request):
+        try:
+            job_data = json.loads(request.data.get('job'))
+            upload_result = cloudinary.uploader.upload(request.data.get('image'), folder='job_image')
+            job_data['image'] = upload_result['url']
+
+            products_data = json.loads(request.data.get('products'))
+            shipment_data = json.loads(request.data.get('shipment'))
+
+            user = request.user
+            job_data['poster'] = user.id
+
+            with transaction.atomic():
+                job = JobSerializer(data=job_data, )
+                job.is_valid(raise_exception=True)
+                job_instance = job.save()
+                products = []
+
+                with transaction.atomic():
+                    for product in products_data:
+                        product['job'] = job_instance.id
+                        p = ProductSerializer(data=product)
+                        p.is_valid(raise_exception=True)
+                        p.save()
+                        products.append(p.data)
+
+                with transaction.atomic():
+                    pick_up_data = shipment_data['pick_up']
+                    delivery_address_data = shipment_data['delivery_address']
+
+                    pick_up = AddressSerializer(data=pick_up_data)
+                    pick_up.is_valid(raise_exception=True)
+                    pick_up.save()
+
+                    delivery_address = AddressSerializer(data=delivery_address_data)
+                    delivery_address.is_valid(raise_exception=True)
+                    delivery_address.save()
+
+                    shipment_data['delivery_address'] = delivery_address.data['id']
+                    shipment_data['pick_up'] = pick_up.data['id']
+                    shipment_data['job'] = job.data['id']
+
+                    shipment = ShipmentSerializer(data=shipment_data)
+                    shipment.is_valid(raise_exception=True)
+
+                    shipment_responce = {**shipment.data, 'delivery_address': {**delivery_address.data},
+                                         'pick_up': {**pick_up.data}}
+
+                responce_data = {
+                    'job': {**job.data},
+                    'products': products,
+                    'shipment': {**shipment_responce}
+                }
+            return Response(json.dumps(responce_data), status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Error in outer function: {e}")
+            return Response(e, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['get'], detail=False)
+    def get_all(self,request):
+        pass
+        # jobs = Job.objects.filter(is_active=True).prefetch_related('shipment_job')
+        # job_serializer = JobSerializer(data=list(jobs),many=True).data
+        # if job_serializer.is_valid(raise_exception=True):
+        #     print('done')
+        # #
+        # # for job in jobs:
+        # #     print(job.shipment_job.all())
+        # return Response(JobSerializer(jobs, context={'request': request}, many=True).data, status=status.HTTP_200_OK)
+
 
 class JobTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = JobType.objects.all()
     serializer_class = JobTypeSerializer
+
+
+class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Shipment.objects.all()
+    serializer_class = ShipmentSerializer
+
+
+class AddressViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Address.objects.all()
+    serializer_class = AddressSerializer
+
+
+class PhotoViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Photo.objects.all()
+    serializer_class = PhotoSerializer
+    parser_classes = [parsers.MultiPartParser, ]
