@@ -100,6 +100,13 @@ DATABASES = {
     }
 }
 
+CACHES = {
+    "default": {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        "LOCATION": "redis://127.0.0.1:6379/1",  # Adjust the URL based on your Redis configuration
+    }
+}
+
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 

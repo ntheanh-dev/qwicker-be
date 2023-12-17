@@ -1,7 +1,9 @@
+from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from cloudinary.models import CloudinaryField
+
 
 class BaseModel(models.Model):
     updated_at = models.DateTimeField(auto_now_add=True)
@@ -11,10 +13,16 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+    def create_superuser(self, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', 1)
+        return self.create_user(**extra_fields)
+
 
 class User(AbstractUser, BaseModel):
     role = models.ForeignKey('Role', related_name="user", on_delete=models.CASCADE, default=1)
-    avatar = models.ImageField()
+    avatar = models.ImageField(upload_to="users/%Y/%m", null=True)
 
     def __str__(self):
         return self.get_full_name()
@@ -32,7 +40,7 @@ class Shipper(User):
 
 
 class Product(BaseModel):
-    job = models.ForeignKey('Job',related_name='product_job', on_delete=models.CASCADE)
+    job = models.ForeignKey('Job', related_name='product_job', on_delete=models.CASCADE)
     length = models.IntegerField(null=False)
     width = models.IntegerField(null=False)
     height = models.IntegerField(null=False)

@@ -7,6 +7,7 @@ from .models import *
 from .serializers import *
 from rest_framework.decorators import action
 from rest_framework.views import Response
+from django.core.cache import cache
 import cloudinary.uploader
 
 
@@ -25,6 +26,30 @@ class UserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIVi
             u.save()
 
         return Response(UserSerializer(u, context={'request': request}).data)
+
+    @action(methods=['post'], detail=False)
+    def sent_otp(self, request):
+        user = request.user
+        if cache.get(user.email):
+            pass
+            # send email
+            return Response({'opt already sent'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['post'], detail=False)
+    def verify_email(self, request):
+        user = request.user
+        opt = request.data
+        cache_opt = cache.get(user.email)
+        if cache_opt:
+            if cache_opt == opt:
+                setattr(user, 'is_active', True)
+            else:
+                return Response({'incorrect otp'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'opt already sent'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
@@ -115,7 +140,7 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 
     @action(methods=['get'], detail=False)
     def get_all(self, request):
-        jobs = Job.objects.filter(is_active=True).prefetch_related('shipment_job','product_job')
+        jobs = Job.objects.filter(is_active=True).prefetch_related('shipment_job', 'product_job')
         jobs_data = JobSerializer(jobs, many=True).data
         #
         for i in range(len(jobs_data)):
@@ -124,7 +149,7 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             jobs_data[i]['shippment'] = shipment_seria
 
             products_queryset = jobs[i].product_job.all()
-            products_seria = ProductSerializer(products_queryset,many=True).data
+            products_seria = ProductSerializer(products_queryset, many=True).data
             jobs_data[i]['products'] = products_seria
         return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
 
