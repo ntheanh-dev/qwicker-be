@@ -1,5 +1,6 @@
 import json
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import render
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
@@ -54,7 +55,7 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 
     @action(methods=['post'], detail=False)
     @transaction.atomic()
-    def post_job(self,request):
+    def post_job(self, request):
         try:
             job_data = json.loads(request.data.get('job'))
             upload_result = cloudinary.uploader.upload(request.data.get('image'), folder='job_image')
@@ -113,16 +114,19 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], detail=False)
-    def get_all(self,request):
-        pass
-        # jobs = Job.objects.filter(is_active=True).prefetch_related('shipment_job')
-        # job_serializer = JobSerializer(data=list(jobs),many=True).data
-        # if job_serializer.is_valid(raise_exception=True):
-        #     print('done')
-        # #
-        # # for job in jobs:
-        # #     print(job.shipment_job.all())
-        # return Response(JobSerializer(jobs, context={'request': request}, many=True).data, status=status.HTTP_200_OK)
+    def get_all(self, request):
+        jobs = Job.objects.filter(is_active=True).prefetch_related('shipment_job','product_job')
+        jobs_data = JobSerializer(jobs, many=True).data
+        #
+        for i in range(len(jobs_data)):
+            shipment_queryset = jobs[i].shipment_job.all().first()
+            shipment_seria = ShipmentSerializer(shipment_queryset).data
+            jobs_data[i]['shippment'] = shipment_seria
+
+            products_queryset = jobs[i].product_job.all()
+            products_seria = ProductSerializer(products_queryset,many=True).data
+            jobs_data[i]['products'] = products_seria
+        return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
 
 
 class JobTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):

@@ -108,10 +108,11 @@ class AddressSerializer(ModelSerializer):
 
 
 class ShipmentSerializer(ModelSerializer):
-    # delivery_address = AddressSerializer()
-    # pick_up = AddressSerializer()
+    delivery_address = AddressSerializer()
+    pick_up = AddressSerializer()
 
     class Meta:
         model = Shipment
-        fields = ['job', 'pick_up', 'delivery_address', 'ready_on', 'collect_on', 'delivered_on', 'cost',
-                  ]
+        fields = ['job', 'pick_up', 'delivery_address', 'ready_on', 'collect_on', 'delivered_on', 'cost',]
+
+    # def to_representation(self, instance):

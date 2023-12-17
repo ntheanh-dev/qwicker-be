@@ -32,7 +32,7 @@ class Shipper(User):
 
 
 class Product(BaseModel):
-    job = models.ForeignKey('Job', on_delete=models.CASCADE)
+    job = models.ForeignKey('Job',related_name='product_job', on_delete=models.CASCADE)
     length = models.IntegerField(null=False)
     width = models.IntegerField(null=False)
     height = models.IntegerField(null=False)
