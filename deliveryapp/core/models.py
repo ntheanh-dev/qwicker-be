@@ -87,9 +87,8 @@ class Shipment(models.Model):
     job = models.ForeignKey(Job, related_name='shipment_job', on_delete=models.CASCADE)
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
-    ready_on = models.DateTimeField(null=True)
-    collect_on = models.DateTimeField(null=True)
-    delivered_on = models.DateTimeField(null=True)
+    shipping_date = models.DateField(null=True)
+    expected_delivery_date = models.DateField(null=True)
     cost = models.DecimalField(max_digits=6, decimal_places=2)
 
 

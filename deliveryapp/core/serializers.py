@@ -87,11 +87,9 @@ class JobTypeSerializer(ModelSerializer):
 
 
 class JobSerializer(ModelSerializer):
-    type = JobTypeSerializer()
-
     class Meta:
         model = Job
-        fields = ['id', 'description', 'type', 'image', 'is_active']
+        fields = ['id', 'description', 'type', 'image', 'is_active','poster']
 
 
 class ProductSerializer(ModelSerializer):
@@ -118,6 +116,12 @@ class ShipmentSerializer(ModelSerializer):
 
     class Meta:
         model = Shipment
-        fields = ['job', 'pick_up', 'delivery_address', 'ready_on', 'collect_on', 'delivered_on', 'cost', ]
+        fields = ['job', 'pick_up', 'delivery_address', 'shipping_date', 'expected_delivery_date', 'cost', ]
 
-    # def to_representation(self, instance):
+
+class AuctionSerializer(ModelSerializer):
+    shipper = ShipperSerializer()
+
+    class Meta:
+        model = Auction
+        fields = '__all__'

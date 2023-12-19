@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.views import Response
 from django.core.cache import cache
 import cloudinary.uploader
+from datetime import datetime
 
 
 # Create your views here.
@@ -139,19 +140,66 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], detail=False)
-    def get_all(self, request):
-        jobs = Job.objects.filter(is_active=True).prefetch_related('shipment_job', 'product_job')
-        jobs_data = JobSerializer(jobs, many=True).data
-        #
-        for i in range(len(jobs_data)):
-            shipment_queryset = jobs[i].shipment_job.all().first()
-            shipment_seria = ShipmentSerializer(shipment_queryset).data
-            jobs_data[i]['shippment'] = shipment_seria
+    def jobs(self, request):
+        fromDate = request.query_params.get('fromDate')
+        toDate = request.query_params.get('toDate')
+        jobs_query = None
+        if fromDate and toDate:
+            fD = datetime.strptime(fromDate, '%d/%m/%Y')
+            tD = datetime.strptime(toDate, '%d/%m/%Y')
+            jobs_query = Job.objects.filter(is_active=True, shipment_job__shipping_date__gte=fD,
+                                            shipment_job__expected_delivery_date__lte=tD).prefetch_related(
+                'shipment_job', 'product_job')
+        else:
+            jobs_query = Job.objects.filter(is_active=True).prefetch_related('shipment_job', 'product_job')
+        jobs_data = JobSerializer(jobs_query, many=True).data
 
-            products_queryset = jobs[i].product_job.all()
-            products_seria = ProductSerializer(products_queryset, many=True).data
-            jobs_data[i]['products'] = products_seria
+        for i in range(len(jobs_data)):
+            shipment = [shipment for shipment in
+                        jobs_query[i].shipment_job.all().select_related('pick_up', 'delivery_address')]
+            jobs_data[i]['shipment'] = ShipmentSerializer(shipment[0]).data
+            products = [products for products in jobs_query[i].product_job.all()]
+            jobs_data[i]['products'] = ProductSerializer(products, many=True).data
         return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
+
+    @action(methods=['get'], detail=False)
+    def my_jobs(self, request):
+        user = request.user
+        jobs_query = Job.objects.filter(is_active=True, poster_id=user.id).prefetch_related('shipment_job',
+                                                                                            'product_job',
+                                                                                            'auction_job')
+        jobs_data = JobSerializer(jobs_query, many=True).data
+        for i in range(len(jobs_data)):
+            shipment = [shipment for shipment in
+                        jobs_query[i].shipment_job.all().select_related('pick_up', 'delivery_address')]
+            jobs_data[i]['shipment'] = ShipmentSerializer(shipment[0]).data
+
+            products = [products for products in jobs_query[i].product_job.all()]
+            jobs_data[i]['products'] = ProductSerializer(products, many=True).data
+
+            auctions = [auction for auction in jobs_query[i].auction_job.all().select_related('shipper')]
+            jobs_data[i]['auctions'] = AuctionSerializer(auctions, many=True).data
+        return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
+        # return Response({'data'}, status=status.HTTP_200_OK)
+
+    @action(methods=['post'], detail=False)
+    def accept(self, request):
+        job_id = request.data.get('job')
+        shipper_id = request.data.get('shipper')
+        user = request.user
+        if job_id and shipper_id:
+            try:
+                # check again when have frontend project
+                job = Job.objects.get(pk=int(job_id), poster_id=user.id)
+                shipper = Shipper.objects.get(pk=int(shipper_id))
+                job.winner = shipper
+                job.save()
+                return Response(status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(e, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        # return Response({'data'}, status=status.HTTP_200_OK)
 
 
 class JobTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
