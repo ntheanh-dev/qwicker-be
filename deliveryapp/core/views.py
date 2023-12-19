@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
+from .perms import JobOwner
 from .serializers import *
 from rest_framework.decorators import action
 from rest_framework.views import Response
@@ -75,8 +76,10 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = JobSerializer
 
     def get_permissions(self):
-        if self.action in ['create']:
+        if self.action in ['create','jobs','my_jobs','post_job']:
             return [permissions.IsAuthenticated()]
+        if self.action in ['my_jobs','accept']:
+            return [JobOwner()]
         return [permissions.AllowAny()]
 
     @action(methods=['post'], detail=False)
@@ -189,17 +192,15 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         user = request.user
         if job_id and shipper_id:
             try:
-                # check again when have frontend project
                 job = Job.objects.get(pk=int(job_id), poster_id=user.id)
                 shipper = Shipper.objects.get(pk=int(shipper_id))
                 job.winner = shipper
                 job.save()
                 return Response(status=status.HTTP_200_OK)
-            except Exception as e:
-                return Response(e, status=status.HTTP_400_BAD_REQUEST)
+            except Job.DoesNotExist:
+                return Response({'Poster not found'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-        # return Response({'data'}, status=status.HTTP_200_OK)
 
 
 class JobTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):

@@ -9,15 +9,16 @@ class ProvideClientIdAndClinetSecret(MiddlewareMixin):
         self.get_response = get_response
 
     def __call__(self, request):
-        post_data = request.POST.copy()
-        post_data['client_id'] = settings.CLIENT_ID
-        post_data['client_secret'] = settings.CLIENT_SECRET
+        if request.method == 'POST' and request.path == '/o/token/':
+            post_data = request.POST.copy()
+            post_data['client_id'] = settings.CLIENT_ID
+            post_data['client_secret'] = settings.CLIENT_SECRET
 
-        new_querydict = QueryDict('', mutable=True)
-        new_querydict.update(post_data)
+            new_querydict = QueryDict('', mutable=True)
+            new_querydict.update(post_data)
 
-        request.POST = new_querydict
+            request.POST = new_querydict
 
         response = self.get_response(request)
-
         return response
+
