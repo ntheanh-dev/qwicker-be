@@ -65,6 +65,16 @@ class RoleViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIVi
     serializer_class = RoleSerializer
 
 
+class VehicelViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Vehicel.objects.all()
+    serializer_class = VehicelSerializer
+
+
+class VehicelShipperViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = VehicelShipper.objects.all()
+    serializer_class = VehicelShipperSerializer
+
+
 class ProductViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -76,9 +86,9 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = JobSerializer
 
     def get_permissions(self):
-        if self.action in ['create','jobs','my_jobs','post_job']:
+        if self.action in ['create', 'jobs', 'my_jobs', 'post_job']:
             return [permissions.IsAuthenticated()]
-        if self.action in ['my_jobs','accept']:
+        if self.action in ['my_jobs', 'accept']:
             return [JobOwner()]
         return [permissions.AllowAny()]
 
@@ -216,9 +226,3 @@ class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 class AddressViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
-
-
-class PhotoViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = Photo.objects.all()
-    serializer_class = PhotoSerializer
-    parser_classes = [parsers.MultiPartParser, ]

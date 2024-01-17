@@ -39,6 +39,17 @@ class Shipper(User):
     cmnd = CloudinaryField('cmnd')
 
 
+class Vehicel(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=255)
+
+
+class VehicelShipper(models.Model):
+    shipper = models.OneToOneField(Shipper, on_delete=models.CASCADE)
+    vehicel = models.OneToOneField(Vehicel, on_delete=models.CASCADE)
+    vehicel_nummber = models.CharField(max_length=20)
+
+
 class Product(BaseModel):
     job = models.ForeignKey('Job', related_name='product_job', on_delete=models.CASCADE)
     length = models.IntegerField(null=False)
@@ -109,8 +120,3 @@ class Payment(BaseModel):
 
 class PaymentMethod(models.Model):
     name = models.CharField(max_length=20)
-
-
-class Photo(models.Model):
-    title = models.CharField(max_length=100, null=True)
-    image = CloudinaryField('image')

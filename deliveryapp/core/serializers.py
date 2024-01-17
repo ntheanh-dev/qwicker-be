@@ -1,9 +1,10 @@
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
 from .models import User, Role, Shipper, Job, JobType, Product, Shipment, Address, Auction, Feedback, \
-    Payment, PaymentMethod, Photo
+    Payment, PaymentMethod, Vehicel, VehicelShipper
 from cloudinary.uploader import upload
 from cloudinary.forms import CloudinaryFileField
 import random
+
 
 class UserSerializer(ModelSerializer):
     class Meta:
@@ -18,7 +19,6 @@ class UserSerializer(ModelSerializer):
         representation = super().to_representation(instance)
         representation['avatar'] = instance.avatar.url
         return representation
-
 
     def create(self, validated_data):
         try:
@@ -40,7 +40,7 @@ class UserSerializer(ModelSerializer):
 class ShipperSerializer(ModelSerializer):
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email','cmnd']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'cmnd']
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -74,6 +74,18 @@ class RoleSerializer(ModelSerializer):
         fields = ['id', 'name']
 
 
+class VehicelSerializer(ModelSerializer):
+    class Meta:
+        model = Vehicel
+        fields = '__all__'
+
+
+class VehicelShipperSerializer(ModelSerializer):
+    class Meta:
+        model = VehicelShipper
+        fields = '__all__'
+
+
 class JobTypeSerializer(ModelSerializer):
     class Meta:
         model = JobType
@@ -89,12 +101,6 @@ class JobSerializer(ModelSerializer):
 class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
-        fields = '__all__'
-
-
-class PhotoSerializer(ModelSerializer):
-    class Meta:
-        model = Photo
         fields = '__all__'
 
 
