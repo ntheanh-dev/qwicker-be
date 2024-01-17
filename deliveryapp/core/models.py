@@ -22,7 +22,7 @@ class BaseModel(models.Model):
 
 class User(AbstractUser, BaseModel):
     role = models.ForeignKey('Role', related_name="user", on_delete=models.CASCADE, default=1)
-    avatar = models.ImageField(upload_to="users/%Y/%m", null=True)
+    avatar = CloudinaryField('avatar')
 
     def __str__(self):
         return self.get_full_name()
@@ -36,7 +36,7 @@ class Role(models.Model):
 
 
 class Shipper(User):
-    cmnd = models.CharField(max_length=12)
+    cmnd = CloudinaryField('cmnd')
 
 
 class Product(BaseModel):

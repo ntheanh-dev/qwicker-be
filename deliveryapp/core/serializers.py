@@ -2,27 +2,23 @@ from rest_framework.serializers import ModelSerializer, SerializerMethodField, C
 from .models import User, Role, Shipper, Job, JobType, Product, Shipment, Address, Auction, Feedback, \
     Payment, PaymentMethod, Photo
 from cloudinary.uploader import upload
-from django.core.cache import cache
+from cloudinary.forms import CloudinaryFileField
 import random
 
-
-class ImageSerializer(ModelSerializer):
-    image = SerializerMethodField(source='avatar')
-
-    def get_image(selfs, user):
-        if user.avatar:
-            request = selfs.context.get('request')
-            return request.build_absolute_uri(user.avatar) if request else ''
-
-
-class UserSerializer(ImageSerializer):
+class UserSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'image']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email']
         extra_kwargs = {
             'password': {'write_only': True},
-            'avatar': {'write_only': True},
         }
+
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        representation['avatar'] = instance.avatar.url
+        return representation
+
 
     def create(self, validated_data):
         try:
@@ -32,27 +28,29 @@ class UserSerializer(ImageSerializer):
             user_role = Role.objects.get(name="USER")
             u.role = user_role
 
-            result = upload(data['avatar'])
-            u.avatar = result['url']
-
             u.set_password(u.password)
 
             u.save()
-            cache.set(str(u.email), str(random.randint(1000, 9999)))
 
             return u
         except Role.DoesNotExist:
             return None
 
 
-class ShipperSerializer(ImageSerializer):
+class ShipperSerializer(ModelSerializer):
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'image', 'last_name', 'avatar', 'username', 'password', 'email', 'cmnd']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email','cmnd']
         extra_kwargs = {
             'password': {'write_only': True},
-            'avatar': {'write_only': True},
         }
+
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        representation['avatar'] = instance.avatar.url
+        representation['cmnd'] = instance.cmnd.url
+        return representation
 
     def create(self, validated_data):
         try:
@@ -63,11 +61,7 @@ class ShipperSerializer(ImageSerializer):
 
             u.is_active = False
 
-            result = upload(data['avatar'], folder='avatar')
-            u.avatar = result['url']
-
             u.set_password(u.password)
-            cache.set(str(u.email), str(random.randint(1000, 9999)))
             u.save()
             return u
         except Role.DoesNotExist:
@@ -89,7 +83,7 @@ class JobTypeSerializer(ModelSerializer):
 class JobSerializer(ModelSerializer):
     class Meta:
         model = Job
-        fields = ['id', 'description', 'type', 'image', 'is_active','poster']
+        fields = ['id', 'description', 'type', 'image', 'is_active', 'poster']
 
 
 class ProductSerializer(ModelSerializer):
