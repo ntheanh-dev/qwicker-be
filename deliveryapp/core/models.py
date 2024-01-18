@@ -60,29 +60,27 @@ class VehicelShipper(models.Model):
     vehicel_nummber = models.CharField(max_length=20)
 
 
-class Product(BaseModel):
+class Product(models.Model):
     job = models.ForeignKey('Job', related_name='product_job', on_delete=models.CASCADE)
-    length = models.IntegerField(null=False)
-    width = models.IntegerField(null=False)
-    height = models.IntegerField(null=False)
-    weight = models.IntegerField(null=False)
-    quantity = models.IntegerField(null=False)
+    category = models.ForeignKey('ProductCategory', related_name='product_category',on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+    image = CloudinaryField('image')
 
 
-class Job(BaseModel):
-    type = models.ForeignKey('JobType', related_name='job_type', on_delete=models.CASCADE)
-    description = models.CharField(max_length=255)
-    # null = True when develop
-    poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE, null=True)
-    winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
-    image = models.CharField(max_length=255)
-
-
-class JobType(models.Model):
+class ProductCategory(models.Model):
     name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
+
+
+class Job(BaseModel):
+    description = models.CharField(max_length=255,null=True)
+    product = models.ForeignKey(User, related_name='job_prd', on_delete=models.CASCADE)
+    poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
+    payment_method = models.ForeignKey('PaymentMethod', related_name='job_pmt', on_delete=models.CASCADE)
+    winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
+    price = models.DecimalField(max_digits=8, decimal_places=3) #max 90000.000
 
 
 class Auction(models.Model):
