@@ -13,14 +13,24 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+
+class UserBaseModel(models.Model):
+    created_date = models.DateTimeField(auto_now_add=True, null=True)
+    updated_date = models.DateTimeField(auto_now=True, null=True)
+    verified = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+
     def create_superuser(self, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('role', 1)
+        extra_fields.setdefault('verified', True)
         return self.create_user(**extra_fields)
 
 
-class User(AbstractUser, BaseModel):
+class User(AbstractUser, UserBaseModel):
     role = models.ForeignKey('Role', related_name="user", on_delete=models.CASCADE, default=1)
     avatar = CloudinaryField('avatar')
 
@@ -36,7 +46,7 @@ class Role(models.Model):
 
 
 class Shipper(User):
-    cmnd = CloudinaryField('cmnd')
+    cmnd = CloudinaryField('cmnd', null=True, default=None, blank=True)
 
 
 class Vehicel(models.Model):
