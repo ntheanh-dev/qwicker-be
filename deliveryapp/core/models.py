@@ -49,19 +49,18 @@ class Shipper(User):
     cmnd = CloudinaryField('cmnd', null=True, default=None, blank=True)
 
 
-class Vehicel(models.Model):
+class Vehicle(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=255)
 
 
-class VehicelShipper(models.Model):
+class VehicleShipper(models.Model):
     shipper = models.OneToOneField(Shipper, on_delete=models.CASCADE)
-    vehicel = models.OneToOneField(Vehicel, on_delete=models.CASCADE)
-    vehicel_nummber = models.CharField(max_length=20)
+    vehicle = models.OneToOneField(Vehicle, on_delete=models.CASCADE)
+    vehicle_number = models.CharField(max_length=20)
 
 
 class Product(models.Model):
-    job = models.ForeignKey('Job', related_name='product_job', on_delete=models.CASCADE)
     category = models.ForeignKey('ProductCategory', related_name='product_category',on_delete=models.CASCADE)
     quantity = models.IntegerField()
     image = CloudinaryField('image')
@@ -79,8 +78,11 @@ class Job(BaseModel):
     product = models.ForeignKey(User, related_name='job_prd', on_delete=models.CASCADE)
     poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
     payment_method = models.ForeignKey('PaymentMethod', related_name='job_pmt', on_delete=models.CASCADE)
+    is_poster_pay = models.BooleanField(default=True)
     winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
-    price = models.DecimalField(max_digits=8, decimal_places=3) #max 90000.000
+    price = models.DecimalField(max_digits=8, decimal_places=3,null=True) #max 90000.000
+    shipment = models.ForeignKey('Shipment', related_name='job_shipment', on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(Vehicle, related_name='job_vehicle', on_delete=models.CASCADE)
 
 
 class Auction(models.Model):
@@ -103,12 +105,9 @@ class Feedback(models.Model):
 
 
 class Shipment(models.Model):
-    job = models.ForeignKey(Job, related_name='shipment_job', on_delete=models.CASCADE)
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
-    shipping_date = models.DateField(null=True)
-    expected_delivery_date = models.DateField(null=True)
-    cost = models.DecimalField(max_digits=6, decimal_places=2)
+    shipping_date = models.DateTimeField(auto_now=True)
 
 
 class Address(models.Model):

@@ -29,8 +29,8 @@ class UserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIVi
 
         return Response(UserSerializer(u, context={'request': request}).data)
 
-    @action(methods=['post'], detail=False)
-    def sent_otp(self, request):
+    @action(methods=['post'], detail=True, url_path='sent-otp')
+    def sent_otp(self, request, pk):
         user = request.user
         if cache.get(user.email):
             pass
@@ -39,14 +39,14 @@ class UserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIVi
         else:
             return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
 
-    @action(methods=['post'], detail=False)
-    def verify_email(self, request):
+    @action(methods=['post'], detail=True, url_path='verify-email')
+    def verify_email(self, request, pk):
         user = request.user
         opt = request.data
         cache_opt = cache.get(user.email)
         if cache_opt:
             if cache_opt == opt:
-                setattr(user, 'is_active', True)
+                setattr(user, 'verified', True)
             else:
                 return Response({'incorrect otp'}, status=status.HTTP_400_BAD_REQUEST)
             return Response({'opt already sent'}, status=status.HTTP_200_OK)
@@ -65,20 +65,25 @@ class RoleViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIVi
     serializer_class = RoleSerializer
 
 
-class VehicelViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = Vehicel.objects.all()
-    serializer_class = VehicelSerializer
+class VehicleViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Vehicle.objects.all()
+    serializer_class = VehicleSerializer
 
 
-class VehicelShipperViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = VehicelShipper.objects.all()
-    serializer_class = VehicelShipperSerializer
+class VehicleShipperViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = VehicleShipper.objects.all()
+    serializer_class = VehicleShipperSerializer
 
 
 class ProductViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     parser_classes = [parsers.MultiPartParser, ]
+
+
+class ProductCategoryViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = ProductCategory.objects.all()
+    serializer_class = ProductCategorySerializer
 
 
 class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
@@ -211,11 +216,6 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                 return Response({'Poster not found'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-
-
-class JobTypeViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = JobType.objects.all()
-    serializer_class = JobTypeSerializer
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
