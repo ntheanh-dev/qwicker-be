@@ -1,7 +1,6 @@
 import json
 from django.db import transaction
 from django.http import HttpResponse
-from django.shortcuts import render
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
 from .perms import JobOwner
@@ -14,9 +13,9 @@ from datetime import datetime
 
 
 # Create your views here.
-class UserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
+    queryset = BasicUser.objects.all()
+    serializer_class = BasicUserSerializer
     parser_classes = [parsers.MultiPartParser, ]
 
     @action(methods=['get', 'put'], detail=False, url_path='current-user')
@@ -27,7 +26,7 @@ class UserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIVi
                 setattr(u, k, v)
             u.save()
 
-        return Response(UserSerializer(u, context={'request': request}).data)
+        return Response(BasicUserSerializer(u, context={'request': request}).data)
 
     @action(methods=['post'], detail=True, url_path='sent-otp')
     def sent_otp(self, request, pk):
@@ -57,22 +56,16 @@ class UserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIVi
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Shipper.objects.all()
     serializer_class = ShipperSerializer
-    parser_classes = [parsers.MultiPartParser, ]
 
 
-class RoleViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
-    queryset = Role.objects.all()
-    serializer_class = RoleSerializer
+class ShipperMoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
+    queryset = ShipperMore.objects.all()
+    serializer_class = ShipperMoreSerializer
 
 
 class VehicleViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
-
-
-class VehicleShipperViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = VehicleShipper.objects.all()
-    serializer_class = VehicleShipperSerializer
 
 
 class ProductViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
