@@ -5,11 +5,10 @@ from . import views
 
 r = routers.DefaultRouter()
 
-r.register('users', views.UserViewSet)
-r.register('role', views.RoleViewSet)
+r.register('users', views.BasicUserViewSet)
 r.register('shippers', views.ShipperViewSet)
+r.register('shipper-more', views.ShipperMoreViewSet)
 r.register('vehicles', views.VehicleViewSet)
-r.register('shipper/vehicle', views.VehicleShipperViewSet)
 r.register('products', views.ProductViewSet)
 r.register('product-categories', views.ProductCategoryViewSet)
 r.register('jobs', views.JobViewSet)
