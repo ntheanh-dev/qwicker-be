@@ -32,14 +32,15 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
 
     @action(methods=['post'], detail=False, url_path='sent-otp')
     def sent_otp(self, request):
-        if request.data.get('receiver'):
+        if request.data.get('email') and request.data.get('first_name'):
             otp = random.randint(1000, 9999)
-            receiver = request.data.get('receiver')
-            send_mail_func(receiver, otp)
+            receiver = request.data.get('email')
+            first_name = request.data.get('first_name')
+            send_mail_func(receiver, otp, first_name)
             cache.set(receiver, str(otp), 60)
             return Response({}, status=status.HTTP_200_OK)
         else:
-            return Response({'receiver field is required '}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Email and first_name are required '}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=False, url_path='verify-email')
     def verify_email(self, request):
