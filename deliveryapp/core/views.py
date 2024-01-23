@@ -35,7 +35,7 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
         if request.data.get('receiver'):
             otp = random.randint(1000, 9999)
             receiver = request.data.get('receiver')
-            send_mail_func.delay(receiver, otp)
+            send_mail_func(receiver, otp)
             cache.set(receiver, str(otp), 60)
             return Response({}, status=status.HTTP_200_OK)
         else:

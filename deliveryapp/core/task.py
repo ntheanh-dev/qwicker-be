@@ -5,7 +5,7 @@ from django.conf import settings
 
 
 @shared_task(bind=True)
-def send_mail_func(self, receiver, otp):
+def send_mail_func( receiver, otp):
     mail_subject = "Thông tin OTP"
     message = "Ban đang thực hiện ký tài khoản online. Nập OTP: 4056 để xác thực gd. Mã"
     send_mail(
