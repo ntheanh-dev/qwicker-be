@@ -41,19 +41,23 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
         else:
             return Response({'receiver field is required '}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], detail=True, url_path='verify-email')
-    def verify_email(self, request, pk):
-        user = request.user
-        opt = request.data
-        cache_opt = cache.get(user.email)
-        if cache_opt:
-            if cache_opt == opt:
-                setattr(user, 'verified', True)
+    @action(methods=['post'], detail=False, url_path='verify-email')
+    def verify_email(self, request):
+        if request.data.get('email') and request.data.get('otp'):
+            email = request.data.get('email')
+            opt = request.data.get('otp')
+            cache_opt = cache.get(email)
+            if cache_opt:
+                if cache_opt == opt:
+                    return Response({'Email is valid'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'incorrect otp'}, status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({'incorrect otp'}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({'opt already sent'}, status=status.HTTP_200_OK)
+                return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
         else:
-            return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
+            return Response({'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
