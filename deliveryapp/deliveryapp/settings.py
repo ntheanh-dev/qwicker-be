@@ -56,7 +56,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'core.middleware.ProvideClientIdAndClinetSecret',
+    # 'core.middleware.ProvideClientIdAndClinetSecret',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -97,7 +97,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'deliverydb',
         'USER': 'root',
-        'PASSWORD': '12345',
+        'PASSWORD': 'Admin@123',
         'HOST': ''  # mặc định localhost
     }
 }
@@ -108,6 +108,9 @@ CACHES = {
         "LOCATION": "redis://127.0.0.1:6379/1",  # Adjust the URL based on your Redis configuration
     }
 }
+
+#Celery
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -158,5 +161,3 @@ cloudinary.config(
     api_secret="lZZWOntBPCDWEnECsmWIalOtl08",
     secure=True
 )
-CLIENT_ID = "P55KQaP6UAxLs99r67UDZ55KNtBYaYZhRLGD6E9C"
-CLIENT_SECRET = "XfolafAYUde30L2lYdW1p4uMIhGiTWhHpmR0FDkzsB41Q6o7tXip6hJUTj8dUlUScjYd8eE9BKaZOfKW9e5MzimzfJ26Hzsd6C0T3U4lBkkIYafn2YLFNMAq8qHvZ3uM"
