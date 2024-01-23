@@ -101,16 +101,35 @@ DATABASES = {
         'HOST': ''  # mặc định localhost
     }
 }
-
+# CACHES = {
+#     "default": {
+#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#         "LOCATION": "redis://127.0.0.1:6379/0",  # Adjust the URL based on your Redis configuration
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#         }
+#     }
+# }
 CACHES = {
     "default": {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        "LOCATION": "redis://127.0.0.1:6379/1",  # Adjust the URL based on your Redis configuration
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
-
-#Celery
+# Celery
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+# SMTP Settings
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'theanhmgt1011@gmail.com'
+EMAIL_HOST_PASSWORD = 'bsvy rugn jkke hbgg'
+DEFAULT_FROM_EMAIL = 'Celery Testing | TheCodeSpace <abc@gmail.com>'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

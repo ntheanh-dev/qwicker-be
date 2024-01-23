@@ -10,6 +10,8 @@ from rest_framework.views import Response
 from django.core.cache import cache
 import cloudinary.uploader
 from datetime import datetime
+import random
+from .task import send_mail_func
 
 
 # Create your views here.
@@ -28,15 +30,16 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
 
         return Response(BasicUserSerializer(u, context={'request': request}).data)
 
-    @action(methods=['post'], detail=True, url_path='sent-otp')
-    def sent_otp(self, request, pk):
-        user = request.user
-        if cache.get(user.email):
-            pass
-            # send email
-            return Response({'opt already sent'}, status=status.HTTP_200_OK)
+    @action(methods=['post'], detail=False, url_path='sent-otp')
+    def sent_otp(self, request):
+        if request.data.get('receiver'):
+            otp = random.randint(1000, 9999)
+            receiver = request.data.get('receiver')
+            send_mail_func.delay(receiver, otp)
+            cache.set(receiver, str(otp), 60)
+            return Response({}, status=status.HTTP_200_OK)
         else:
-            return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
+            return Response({'receiver field is required '}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=True, url_path='verify-email')
     def verify_email(self, request, pk):
