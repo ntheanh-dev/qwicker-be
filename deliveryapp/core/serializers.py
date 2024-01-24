@@ -14,7 +14,10 @@ class BasicUserSerializer(ModelSerializer):
     def to_representation(self, instance):
         # Customize the representation of the serialized data here
         representation = super().to_representation(instance)
-        representation['avatar'] = instance.avatar.url
+        try:
+            representation['avatar'] = instance.avatar.url
+        except AttributeError:
+            pass
         return representation
 
     def create(self, validated_data):
@@ -41,8 +44,8 @@ class ShipperSerializer(ModelSerializer):
 
         # Customize the representation of the serialized data here
         representation = super().to_representation(instance)
-        representation['avatar'] = instance.avatar.url
         try:
+            representation['avatar'] = instance.avatar.url
             representation['more'] = ShipperMoreSerializer(instance=instance.more).data
         except AttributeError:
             pass
@@ -67,7 +70,10 @@ class ShipperMoreSerializer(ModelSerializer):
     def to_representation(self, instance):
         # Customize the representation of the serialized data here
         representation = super().to_representation(instance)
-        representation['cmnd'] = instance.cmnd.url
+        try:
+            representation['cmnd'] = instance.cmnd.url
+        except AttributeError:
+            pass
         return representation
 
 
@@ -75,6 +81,15 @@ class VehicleSerializer(ModelSerializer):
     class Meta:
         model = Vehicle
         fields = '__all__'
+
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        try:
+            representation['icon'] = instance.icon.url
+        except AttributeError:
+            pass
+        return representation
 
 
 class JobSerializer(ModelSerializer):

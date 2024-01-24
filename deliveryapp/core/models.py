@@ -28,7 +28,6 @@ class User(AbstractUser):
     avatar = CloudinaryField('avatar')
 
     def __str__(self):
-
         return f'{self.get_full_name()} - {self.role}'
 
 
@@ -52,7 +51,7 @@ class ShipperManager(BaseUserManager):
 class ShipperMore(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     cmnd = CloudinaryField('cmnd', null=True, default=None, blank=True)
-    vehicle = models.ForeignKey("Vehicle", on_delete=models.CASCADE,null=True)
+    vehicle = models.ForeignKey("Vehicle", on_delete=models.CASCADE, null=True)
     vehicle_number = models.CharField(max_length=20, null=True)
 
 
@@ -70,13 +69,17 @@ class Shipper(User):
 class Vehicle(models.Model):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=255)
+    capacity = models.CharField(max_length=100)
+    icon = CloudinaryField(folder='vehicle_icon')
 
     def __str__(self):
         return self.name
 
 
 class Product(models.Model):
-    category = models.ForeignKey('ProductCategory', related_name='product_category', on_delete=models.CASCADE)
+    # True when user select another product category
+    category = models.ForeignKey('ProductCategory', related_name='product_category', on_delete=models.CASCADE,
+                                 null=True)
     quantity = models.IntegerField()
     image = CloudinaryField('image')
 
