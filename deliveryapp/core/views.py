@@ -23,12 +23,14 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
     @action(methods=['get', 'put'], detail=False, url_path='current-user')
     def current_user(self, request):
         u = request.user
-        if request.method.__eq__('PUT'):
-            for k, v in request.data.items():
-                setattr(u, k, v)
-            u.save()
-
-        return Response(BasicUserSerializer(u, context={'request': request}).data)
+        if u.role == User.Roles.BASIC_USER:
+            if request.method.__eq__('PUT'):
+                for k, v in request.data.items():
+                    setattr(u, k, v)
+                u.save()
+            return Response(BasicUserSerializer(u, context={'request': request}).data,status=status.HTTP_200_OK)
+        else:
+            return Response({},status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=False, url_path='sent-otp')
     def sent_otp(self, request):
@@ -63,23 +65,38 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
     queryset = Shipper.objects.all()
     serializer_class = ShipperSerializer
 
+    @action(methods=['get', 'put'], detail=False, url_path='current-user')
+    def current_user(self, request):
+        u = request.user
+        if u.role == User.Roles.SHIPPER:
+            if request.method.__eq__('PUT'):
+                for k, v in request.data.items():
+                    setattr(u, k, v)
+                u.save()
+            return Response(BasicUserSerializer(u, context={'request': request}).data, status=status.HTTP_200_OK)
+        else:
+            return Response({}, status=status.HTTP_400_BAD_REQUEST)
+
+
     @transaction.atomic()
     def create(self, request, *args, **kwargs):
         data = request.data
 
-        basic_account_info = {key: data.getlist(key) if len(data.getlist(key)) > 1 else data[key] for key in data}
-        selected_fields = ['cmnd', 'vehicle', 'vehicel_number']
-        additional_info = {key: basic_account_info.pop(key) for key in selected_fields}
+        try:
+            basic_account_info = {key: data.getlist(key) if len(data.getlist(key)) > 1 else data[key] for key in data}
+            selected_fields = ['cmnd', 'vehicle', 'vehicle_number']
+            additional_info = {key: basic_account_info.pop(key) for key in selected_fields}
 
-        s = ShipperSerializer(data=basic_account_info)
-        s.is_valid(raise_exception=True)
-        s_instance = s.save()
+            s = ShipperSerializer(data=basic_account_info)
+            s.is_valid(raise_exception=True)
+            s_instance = s.save()
 
-        additional_info['user'] = s_instance.id
-        sm = ShipperMoreSerializer(data=additional_info)
-        sm.is_valid(raise_exception=True)
-
-        return Response(ShipperSerializer(s_instance).data, status=status.HTTP_201_CREATED)
+            additional_info['user'] = s_instance.id
+            sm = ShipperMoreSerializer(data=additional_info)
+            sm.is_valid(raise_exception=True)
+            return Response(ShipperSerializer(s_instance).data, status=status.HTTP_201_CREATED)
+        except:
+            return Response({'invalid fields were sent'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShipperMoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
