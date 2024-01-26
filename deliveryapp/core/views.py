@@ -59,11 +59,27 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
             return Response({'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Shipper.objects.all()
     serializer_class = ShipperSerializer
+
+    @transaction.atomic()
+    def create(self, request, *args, **kwargs):
+        data = request.data
+
+        basic_account_info = {key: data.getlist(key) if len(data.getlist(key)) > 1 else data[key] for key in data}
+        selected_fields = ['cmnd', 'vehicle', 'vehicel_number']
+        additional_info = {key: basic_account_info.pop(key) for key in selected_fields}
+
+        s = ShipperSerializer(data=basic_account_info)
+        s.is_valid(raise_exception=True)
+        s_instance = s.save()
+
+        additional_info['user'] = s_instance.id
+        sm = ShipperMoreSerializer(data=additional_info)
+        sm.is_valid(raise_exception=True)
+
+        return Response(ShipperSerializer(s_instance).data, status=status.HTTP_201_CREATED)
 
 
 class ShipperMoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):

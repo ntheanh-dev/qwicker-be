@@ -65,7 +65,7 @@ class ShipperSerializer(ModelSerializer):
 class ShipperMoreSerializer(ModelSerializer):
     class Meta:
         model = ShipperMore
-        fields = ['cmnd', 'vehicle', 'vehicle_number']
+        fields = '__all__'
 
     def to_representation(self, instance):
         # Customize the representation of the serialized data here
