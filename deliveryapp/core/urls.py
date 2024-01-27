@@ -14,7 +14,8 @@ r.register('product-categories', views.ProductCategoryViewSet)
 r.register('jobs', views.JobViewSet)
 r.register('shipment', views.ShipmentViewSet)
 r.register('address', views.AddressViewSet)
-
+r.register('payments', views.PaymentViewSet)
+r.register('payment-method', views.PaymentMethodViewSet)
 urlpatterns = [
     path('', include(r.urls))
 ]

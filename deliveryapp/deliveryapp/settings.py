@@ -125,7 +125,7 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = 'django-db'
-CELERY_TIMEZONE = "Asia/HoChiMinh"
+CELERY_TIMEZONE = "Asia/Ho_Chi_Minh"
 
 
 # SMTP Settings
@@ -161,7 +161,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = "Asia/HoChiMinh"
+TIME_ZONE = "Asia/Ho_Chi_Minh"
 
 USE_I18N = True
 

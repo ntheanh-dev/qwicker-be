@@ -92,15 +92,14 @@ class ProductCategory(models.Model):
 
 
 class Job(BaseModel):
+    poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(Vehicle, related_name='job_vehicle', on_delete=models.CASCADE)
     description = models.CharField(max_length=255, null=True)
     product = models.ForeignKey(User, related_name='job_prd', on_delete=models.CASCADE)
-    poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
-    payment_method = models.ForeignKey('PaymentMethod', related_name='job_pmt', on_delete=models.CASCADE)
-    is_poster_pay = models.BooleanField(default=True)
     winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
     price = models.DecimalField(max_digits=8, decimal_places=3, null=True)  # max 90000.000
+    payment = models.ForeignKey('Payment', related_name='job_payment', on_delete=models.CASCADE)
     shipment = models.ForeignKey('Shipment', related_name='job_shipment', on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, related_name='job_vehicle', on_delete=models.CASCADE)
 
 
 class Auction(models.Model):
@@ -108,8 +107,6 @@ class Auction(models.Model):
     shipper = models.ForeignKey(Shipper, related_name='auction_shipper', on_delete=models.CASCADE)
     time_joined = models.DateTimeField(auto_now=True)
     comment = models.CharField(max_length=255)
-    start_date = models.DateTimeField()
-    close_date = models.DateTimeField()
     # maybe add cost filed used for auctioning
 
 
@@ -123,24 +120,31 @@ class Feedback(models.Model):
 
 
 class Shipment(models.Model):
+    class Type(models.TextChoices):
+        NOW = "NOW", "Now"
+        LATTER = "LATTER", 'Latter'
+
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
-    shipping_date = models.DateTimeField(auto_now=True)
+    type = models.CharField(max_length=10, choices=Type.choices, default=Type.NOW)
+    shipping_date = models.DateTimeField(null=True)
 
 
 class Address(models.Model):
     contact = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
-    country = models.CharField(max_length=50)
     city = models.CharField(max_length=50)
+    district = models.CharField(max_length=50)
     street = models.CharField(max_length=50)
     home_number = models.CharField(max_length=10)
+    
 
-
-class Payment(BaseModel):
+class Payment(models.Model):
+    payment_method = models.ForeignKey('PaymentMethod', related_name='job_pmt', on_delete=models.CASCADE)
     method = models.ForeignKey('PaymentMethod', on_delete=models.CASCADE)
-    job = models.ForeignKey(Job, related_name='payment_job', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=6, decimal_places=2)
+    is_poster_pay = models.BooleanField(default=True)
+    payment_date = models.DateTimeField(null=True)
 
 
 class PaymentMethod(models.Model):

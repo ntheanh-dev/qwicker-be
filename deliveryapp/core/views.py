@@ -260,3 +260,13 @@ class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 class AddressViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
+
+
+class PaymentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+
+
+class PaymentMethodViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = PaymentMethod.objects.all()
+    serializer_class = PaymentMethodSerializer

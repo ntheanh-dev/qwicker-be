@@ -1,6 +1,6 @@
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
 from .models import *
-
+from django.utils import timezone
 
 class BasicUserSerializer(ModelSerializer):
     class Meta:
@@ -117,12 +117,21 @@ class AddressSerializer(ModelSerializer):
 
 
 class ShipmentSerializer(ModelSerializer):
-    delivery_address = AddressSerializer()
-    pick_up = AddressSerializer()
+    # delivery_address = AddressSerializer()
+    # pick_up = AddressSerializer()
 
     class Meta:
         model = Shipment
         fields = '__all__'
+
+    def create(self, validated_data):
+        data = validated_data.copy()
+        s = Shipment(**data)
+
+        if s.type == Shipment.Type.NOW:
+            s.shipping_date = timezone.now()
+        s.save()
+        return s
 
 
 class AuctionSerializer(ModelSerializer):
@@ -130,4 +139,16 @@ class AuctionSerializer(ModelSerializer):
 
     class Meta:
         model = Auction
+        fields = '__all__'
+
+
+class PaymentSerializer(ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = '__all__'
+
+
+class PaymentMethodSerializer(ModelSerializer):
+    class Meta:
+        model = PaymentMethod
         fields = '__all__'
