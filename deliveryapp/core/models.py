@@ -97,7 +97,6 @@ class Job(BaseModel):
     description = models.CharField(max_length=255, null=True)
     product = models.ForeignKey(User, related_name='job_prd', on_delete=models.CASCADE)
     winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
-    price = models.DecimalField(max_digits=8, decimal_places=3, null=True)  # max 90000.000
     payment = models.ForeignKey('Payment', related_name='job_payment', on_delete=models.CASCADE)
     shipment = models.ForeignKey('Shipment', related_name='job_shipment', on_delete=models.CASCADE)
 
@@ -128,20 +127,35 @@ class Shipment(models.Model):
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.NOW)
     shipping_date = models.DateTimeField(null=True)
+    cost = models.DecimalField(max_digits=8, decimal_places=3, null=True)  # max 90000.000
 
 
 class Address(models.Model):
     contact = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
+    country = models.CharField(max_length=20)
     city = models.CharField(max_length=50)
     district = models.CharField(max_length=50)
-    street = models.CharField(max_length=50)
-    home_number = models.CharField(max_length=10)
-    
+    street = models.CharField(max_length=50, null=True)
+    home_number = models.CharField(max_length=10, null=True)
+    latitude = models.DecimalField(max_digits=8, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+
+    def get_long_name(self):
+        if self.home_number and self.street:
+            return f'{self.home_number} Đ. {self.street}, {self.district}, Thành phố {self.city}, {self.country}'
+        else:
+            return f'{self.district}, Thành phố {self.city}, {self.country}'
+
+    def get_short_name(self):
+        if self.home_number and self.street:
+            return f'{self.home_number} Đ. {self.street}'
+        else:
+            return f'{self.district}'
+
 
 class Payment(models.Model):
-    payment_method = models.ForeignKey('PaymentMethod', related_name='job_pmt', on_delete=models.CASCADE)
-    method = models.ForeignKey('PaymentMethod', on_delete=models.CASCADE)
+    method = models.ForeignKey('PaymentMethod', related_name='job_pmt', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=6, decimal_places=2)
     is_poster_pay = models.BooleanField(default=True)
     payment_date = models.DateTimeField(null=True)

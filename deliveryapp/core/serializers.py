@@ -1,6 +1,7 @@
-from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField, ReadOnlyField
 from .models import *
 from django.utils import timezone
+
 
 class BasicUserSerializer(ModelSerializer):
     class Meta:
@@ -111,9 +112,23 @@ class ProductCategorySerializer(ModelSerializer):
 
 
 class AddressSerializer(ModelSerializer):
+    short_name = SerializerMethodField()
+    long_name = SerializerMethodField()
+
+    def get_short_name(self, address):
+        return address.get_short_name()
+
+    def get_long_name(self, address):
+        return address.get_long_name()
+
     class Meta:
         model = Address
-        fields = '__all__'
+        fields = ['contact', 'phone_number', 'city', 'country', 'district', 'street', 'home_number', 'latitude',
+                  'longitude', 'short_name', 'long_name']
+        extra_kwargs = {
+            'short_name': {'read_only': True},
+            'long_name': {'read_only': True},
+        }
 
 
 class ShipmentSerializer(ModelSerializer):
