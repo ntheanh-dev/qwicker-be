@@ -123,12 +123,8 @@ class AddressSerializer(ModelSerializer):
 
     class Meta:
         model = Address
-        fields = ['contact', 'phone_number', 'city', 'country', 'district', 'street', 'home_number', 'latitude',
+        fields = ['id', 'contact', 'phone_number', 'city', 'country', 'district', 'street', 'home_number', 'latitude',
                   'longitude', 'short_name', 'long_name']
-        extra_kwargs = {
-            'short_name': {'read_only': True},
-            'long_name': {'read_only': True},
-        }
 
 
 class ShipmentSerializer(ModelSerializer):

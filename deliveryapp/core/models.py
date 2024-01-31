@@ -95,7 +95,7 @@ class Job(BaseModel):
     poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, related_name='job_vehicle', on_delete=models.CASCADE)
     description = models.CharField(max_length=255, null=True)
-    product = models.ForeignKey(User, related_name='job_prd', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, related_name='job_prd', on_delete=models.CASCADE)
     winner = models.ForeignKey(Shipper, related_name='job_winner', on_delete=models.CASCADE, null=True)
     payment = models.ForeignKey('Payment', related_name='job_payment', on_delete=models.CASCADE)
     shipment = models.ForeignKey('Shipment', related_name='job_shipment', on_delete=models.CASCADE)
@@ -120,14 +120,14 @@ class Feedback(models.Model):
 
 class Shipment(models.Model):
     class Type(models.TextChoices):
-        NOW = "NOW", "Now"
-        LATTER = "LATTER", 'Latter'
+        NOW = "Now", "NOW"
+        LATTER = "Latter", 'Latter'
 
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.NOW)
     shipping_date = models.DateTimeField(null=True)
-    cost = models.DecimalField(max_digits=8, decimal_places=3, null=True)  # max 90000.000
+    cost = models.DecimalField(max_digits=8, decimal_places=0, null=True)  # max 90000.000
 
 
 class Address(models.Model):
@@ -138,8 +138,8 @@ class Address(models.Model):
     district = models.CharField(max_length=50)
     street = models.CharField(max_length=50, null=True)
     home_number = models.CharField(max_length=10, null=True)
-    latitude = models.DecimalField(max_digits=8, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    latitude = models.DecimalField(max_digits=17, decimal_places=15)
+    longitude = models.DecimalField(max_digits=17, decimal_places=14)
 
     def get_long_name(self):
         if self.home_number and self.street:
@@ -156,7 +156,7 @@ class Address(models.Model):
 
 class Payment(models.Model):
     method = models.ForeignKey('PaymentMethod', related_name='job_pmt', on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=6, decimal_places=2)
+    amount = models.DecimalField(max_digits=8, decimal_places=0, null=True)
     is_poster_pay = models.BooleanField(default=True)
     payment_date = models.DateTimeField(null=True)
 

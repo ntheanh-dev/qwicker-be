@@ -28,9 +28,9 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
                 for k, v in request.data.items():
                     setattr(u, k, v)
                 u.save()
-            return Response(BasicUserSerializer(u, context={'request': request}).data,status=status.HTTP_200_OK)
+            return Response(BasicUserSerializer(u, context={'request': request}).data, status=status.HTTP_200_OK)
         else:
-            return Response({},status=status.HTTP_400_BAD_REQUEST)
+            return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=False, url_path='sent-otp')
     def sent_otp(self, request):
@@ -38,7 +38,7 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
             otp = random.randint(1000, 9999)
             receiver = request.data.get('email')
             first_name = request.data.get('first_name')
-            send_mail_func(receiver, otp, first_name)
+            send_mail_func.delay(receiver, otp, first_name)
             cache.set(receiver, str(otp), 60)
             return Response({}, status=status.HTTP_200_OK)
         else:
@@ -76,7 +76,6 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
             return Response(BasicUserSerializer(u, context={'request': request}).data, status=status.HTTP_200_OK)
         else:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
-
 
     @transaction.atomic()
     def create(self, request, *args, **kwargs):
@@ -125,11 +124,69 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = JobSerializer
 
     def get_permissions(self):
-        if self.action in ['create', 'jobs', 'my_jobs', 'post_job']:
+        if self.action in ['jobs', 'my_jobs', 'post_job']:
             return [permissions.IsAuthenticated()]
         if self.action in ['my_jobs', 'accept']:
             return [JobOwner()]
         return [permissions.AllowAny()]
+
+    def create(self, request, *args, **kwargs):
+        cleaned_data = {}
+        for key, value in request.POST.items():
+            # Split the keys on '[' and ']'
+            keys = key.split('[')
+            keys = [key.rstrip(']') for key in keys]
+
+            # Recursive function to set the nested values in the dictionary
+            def set_nested_value(dictionary, keys, value):
+                if len(keys) == 1:
+                    dictionary[keys[0]] = value
+                else:
+                    if keys[0] not in dictionary:
+                        dictionary[keys[0]] = {}
+                    set_nested_value(dictionary[keys[0]], keys[1:], value)
+
+            set_nested_value(cleaned_data, keys, value)
+        try:
+            with transaction.atomic():
+                # Product
+                product = ProductSerializer(data=cleaned_data['product'])
+                product.is_valid(raise_exception=True)
+                product.save()
+                # Address
+                pick_up = AddressSerializer(data=cleaned_data['pick_up'])
+                pick_up.is_valid(raise_exception=True)
+                pick_up.save()
+                # Address
+                delivery_address = AddressSerializer(data=cleaned_data['delivery_address'])
+                delivery_address.is_valid(raise_exception=True)
+                delivery_address.save()
+                # Shipment
+                s = cleaned_data['shipment']
+                s['pick_up'] = pick_up.data['id']
+                s['delivery_address'] = delivery_address.data['id']
+                shipment = ShipmentSerializer(data=s)
+                shipment.is_valid(raise_exception=True)
+                shipment.save()
+                # Payment
+                payment = PaymentSerializer(data=cleaned_data['payment'])
+                payment.is_valid(raise_exception=True)
+                payment.save()
+                # Job
+                job = cleaned_data['order']
+                job['poster'] = request.user.id
+                job['product'] = product.data['id']
+                job['payment'] = payment.data['id']
+                job['shipment'] = shipment.data['id']
+
+                job_instance = JobSerializer(data=job)
+                job_instance.is_valid(raise_exception=True)
+                job_instance.save()
+
+        except Exception as e:
+            print(e)
+
+        return Response(job_instance.data, status=status.HTTP_200_OK)
 
     @action(methods=['post'], detail=False)
     @transaction.atomic()
