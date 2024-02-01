@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from cloudinary.models import CloudinaryField
+from django.utils import timezone
 
 
 class BaseModel(models.Model):
@@ -81,7 +82,7 @@ class Product(models.Model):
     category = models.ForeignKey('ProductCategory', related_name='product_category', on_delete=models.CASCADE,
                                  null=True)
     quantity = models.IntegerField()
-    image = CloudinaryField('image')
+    image = CloudinaryField('image', folder='product')
 
 
 class ProductCategory(models.Model):
@@ -126,7 +127,7 @@ class Shipment(models.Model):
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.NOW)
-    shipping_date = models.DateTimeField(null=True)
+    shipping_date = models.DateTimeField()
     cost = models.DecimalField(max_digits=8, decimal_places=0, null=True)  # max 90000.000
 
 

@@ -1,4 +1,4 @@
-from rest_framework.serializers import ModelSerializer, SerializerMethodField, CharField, ReadOnlyField
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, DateTimeField
 from .models import *
 from django.utils import timezone
 
@@ -128,8 +128,7 @@ class AddressSerializer(ModelSerializer):
 
 
 class ShipmentSerializer(ModelSerializer):
-    # delivery_address = AddressSerializer()
-    # pick_up = AddressSerializer()
+    shipping_date = DateTimeField(format='%Y-%m-%d %H:%M')
 
     class Meta:
         model = Shipment
