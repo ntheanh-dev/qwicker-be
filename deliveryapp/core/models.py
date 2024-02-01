@@ -127,7 +127,7 @@ class Shipment(models.Model):
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.NOW)
-    shipping_date = models.DateTimeField()
+    shipment_date = models.DateTimeField()
     cost = models.DecimalField(max_digits=8, decimal_places=0, null=True)  # max 90000.000
 
 

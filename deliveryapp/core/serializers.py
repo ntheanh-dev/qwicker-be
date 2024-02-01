@@ -128,7 +128,7 @@ class AddressSerializer(ModelSerializer):
 
 
 class ShipmentSerializer(ModelSerializer):
-    shipping_date = DateTimeField(format='%Y-%m-%d %H:%M')
+    shipment_date = DateTimeField(format='%Y-%m-%d %H:%M')
 
     class Meta:
         model = Shipment
