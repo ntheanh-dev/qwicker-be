@@ -11,8 +11,7 @@ from django.core.cache import cache
 import cloudinary.uploader
 from datetime import datetime
 import random
-from .task import send_mail_func
-
+from deliveryapp.celery import send_mail_func
 
 # Create your views here.
 class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
