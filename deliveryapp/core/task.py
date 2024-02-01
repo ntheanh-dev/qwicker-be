@@ -3,9 +3,9 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from .celery import app
 
-
-# @shared_task(bind=True)
+@app.task()
 def send_mail_func(receiver, otp, first_name):
     template_name = "core/verify_email.html"
     html_message = render_to_string(template_name, {'otp': otp, 'first_name': first_name})

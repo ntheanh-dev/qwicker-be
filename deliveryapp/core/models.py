@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from cloudinary.models import CloudinaryField
-from django.utils import timezone
+import uuid
 
 
 class BaseModel(models.Model):
@@ -83,6 +83,7 @@ class Product(models.Model):
                                  null=True)
     quantity = models.IntegerField()
     image = CloudinaryField('image', folder='product')
+    mass = models.CharField(max_length=100)
 
 
 class ProductCategory(models.Model):
@@ -93,6 +94,7 @@ class ProductCategory(models.Model):
 
 
 class Job(BaseModel):
+    uuid = models.UUIDField(default=uuid.uuid4(), editable=False, unique=True)
     poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, related_name='job_vehicle', on_delete=models.CASCADE)
     description = models.CharField(max_length=255, null=True)

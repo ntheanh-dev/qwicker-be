@@ -163,6 +163,7 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                 delivery_address.save()
                 # Shipment
                 s = cleaned_data['shipment']
+                print(s)
                 s['pick_up'] = pick_up.data['id']
                 s['delivery_address'] = delivery_address.data['id']
                 shipment = ShipmentSerializer(data=s)
@@ -178,15 +179,16 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                 job['product'] = product.data['id']
                 job['payment'] = payment.data['id']
                 job['shipment'] = shipment.data['id']
-
+                #
                 job_instance = JobSerializer(data=job)
                 job_instance.is_valid(raise_exception=True)
                 job_instance.save()
 
+                return Response(job_instance.data, status=status.HTTP_200_OK)
+
         except Exception as e:
             print(e)
-
-        return Response(job_instance.data, status=status.HTTP_200_OK)
+            return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=False)
     @transaction.atomic()

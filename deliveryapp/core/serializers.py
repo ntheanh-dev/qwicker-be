@@ -98,6 +98,15 @@ class JobSerializer(ModelSerializer):
         model = Job
         fields = '__all__'
 
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        try:
+            representation['uuid'] = str(instance.uuid.int)[:12]
+        except AttributeError:
+            pass
+        return representation
+
 
 class ProductSerializer(ModelSerializer):
     class Meta:
