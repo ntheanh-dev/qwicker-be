@@ -1,9 +1,9 @@
 import json
-from django.db import transaction,IntegrityError
+from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
-from .perms import JobOwner, IsShipper
+from .perms import *
 from .serializers import *
 from rest_framework.decorators import action
 from rest_framework.views import Response
@@ -11,7 +11,9 @@ from django.core.cache import cache
 import cloudinary.uploader
 from datetime import datetime
 import random
+from .ultils import *
 from deliveryapp.celery import send_mail_func
+
 
 # Create your views here.
 class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
@@ -123,11 +125,11 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = JobSerializer
 
     def get_permissions(self):
-        if self.action in ['jobs', 'my_jobs', 'post_job']:
-            return [permissions.IsAuthenticated()]
-        if self.action in ['my_jobs', 'accept']:
-            return [JobOwner()]
-        return [permissions.AllowAny()]
+        if self.action in ['create']:
+            self.permission_classes = [IsBasicUser]
+        if self.action in ['my_jobs']:
+            self.permission_classes = [BasicUserOwnerJob]
+        return super(JobViewSet, self).get_permissions()
 
     def create(self, request, *args, **kwargs):
         cleaned_data = {}
@@ -181,8 +183,8 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                 job_instance = JobSerializer(data=job)
                 job_instance.is_valid(raise_exception=True)
                 job_instance.save()
-
-                return Response(job_instance.data, status=status.HTTP_201_CREATED)
+                job_data = get_jobs_data({'id': job_instance.data['id']})
+                return Response(job_data[0], status=status.HTTP_201_CREATED)
 
         except Exception as e:
             print(e)
@@ -211,25 +213,14 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             jobs_data[i]['products'] = ProductSerializer(products, many=True).data
         return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
 
-    @action(methods=['get'], detail=False)
+    @action(methods=['get'], detail=False, url_path='my-jobs')
     def my_jobs(self, request):
-        user = request.user
-        jobs_query = Job.objects.filter(is_active=True, poster_id=user.id).prefetch_related('shipment_job',
-                                                                                            'product_job',
-                                                                                            'auction_job')
-        jobs_data = JobSerializer(jobs_query, many=True).data
-        for i in range(len(jobs_data)):
-            shipment = [shipment for shipment in
-                        jobs_query[i].shipment_job.all().select_related('pick_up', 'delivery_address')]
-            jobs_data[i]['shipment'] = ShipmentSerializer(shipment[0]).data
-
-            products = [products for products in jobs_query[i].product_job.all()]
-            jobs_data[i]['products'] = ProductSerializer(products, many=True).data
-
-            auctions = [auction for auction in jobs_query[i].auction_job.all().select_related('shipper')]
-            jobs_data[i]['auctions'] = AuctionSerializer(auctions, many=True).data
-        return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
-        # return Response({'data'}, status=status.HTTP_200_OK)
+        job_status = request.data.get('status')
+        if job_status:
+            jobs_data = get_jobs_data({'poster_id': request.user.id, 'status': job_status})
+            return Response(jobs_data, status=status.HTTP_200_OK)
+        else:
+            return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=False)
     def accept(self, request):
@@ -249,17 +240,17 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], detail=True, url_path='get-auction')
-    def get_auction(self,request, pk):
+    def get_auction(self, request, pk):
         user = request.user
-        job = Job.objects.filter(poster_id=user.id,id=pk).prefetch_related('auction_job')
+        job = Job.objects.filter(poster_id=user.id, id=pk).prefetch_related('auction_job')
         if job:
             auctions = [auction for auction in job[0].auction_job.all()]
-            return Response(AuctionSerializer(auctions,many=True).data, status= status.HTTP_200_OK)
+            return Response(AuctionSerializer(auctions, many=True).data, status=status.HTTP_200_OK)
         else:
-            return Response([],status=status.HTTP_404_NOT_FOUND)
+            return Response([], status=status.HTTP_404_NOT_FOUND)
 
 
-class ShipperJobViewSet(viewsets.ViewSet,viewsets.ModelViewSet):
+class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
 
@@ -269,11 +260,9 @@ class ShipperJobViewSet(viewsets.ViewSet,viewsets.ModelViewSet):
         return super(ShipperJobViewSet, self).get_permissions()
 
     @action(methods=['get'], detail=False, url_path='find-job')
-    def find_job(self,request):
+    def find_job(self, request):
         queryset = self.get_queryset().filter(status=Job.Status.FINDING_SHIPPER)
-        return Response(JobSerializer(queryset,many=True).data,status=status.HTTP_200_OK)
-
-
+        return Response(JobSerializer(queryset, many=True).data, status=status.HTTP_200_OK)
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
@@ -299,6 +288,7 @@ class PaymentMethodViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 class AuctionViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Auction.objects.all()
     serializer_class = AuctionSerializer
+
     def get_permissions(self):
         if self.action in ['create']:
             self.permission_classes = [IsShipper]
@@ -309,9 +299,10 @@ class AuctionViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         shipper = request.data.get('shipper')
         if job and shipper is not None:
             try:
-                a = Auction.objects.create(job_id=job,shipper_id=shipper)
-                return Response(AuctionSerializer(a).data,status=status.HTTP_201_CREATED)
+                a = Auction.objects.create(job_id=job, shipper_id=shipper)
+                return Response(AuctionSerializer(a).data, status=status.HTTP_201_CREATED)
             except IntegrityError:
-                return Response(data={'error_msg': "job or shipper does not exist!"},status=status.HTTP_400_BAD_REQUEST)
+                return Response(data={'error_msg': "job or shipper does not exist!"},
+                                status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response(data={'error_msg': "Job and shipper are required!!!"},status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={'error_msg': "Job and shipper are required!!!"}, status=status.HTTP_400_BAD_REQUEST)
