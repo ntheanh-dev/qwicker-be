@@ -118,6 +118,8 @@ class Auction(models.Model):
     shipper = models.ForeignKey(Shipper, related_name='auction_shipper', on_delete=models.CASCADE)
     time_joined = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ('job', 'shipper')
 
 class Feedback(models.Model):
     created_at = models.DateTimeField(auto_now=True)

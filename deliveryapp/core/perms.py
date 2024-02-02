@@ -9,5 +9,8 @@ class JobOwner(permissions.IsAuthenticated):
 
 class IsShipper(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.role == User.Roles.SHIPPER
+        if request.user.is_anonymous:
+            return False
+        else:
+            return request.user.role == User.Roles.SHIPPER
 

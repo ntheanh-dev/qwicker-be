@@ -13,7 +13,6 @@ from datetime import datetime
 import random
 from deliveryapp.celery import send_mail_func
 
-
 # Create your views here.
 class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = BasicUser.objects.all()
@@ -249,6 +248,16 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['get'], detail=True, url_path='get-auction')
+    def get_auction(self,request, pk):
+        user = request.user
+        job = Job.objects.filter(poster_id=user.id,id=pk).prefetch_related('auction_job')
+        if job:
+            auctions = [auction for auction in job[0].auction_job.all()]
+            return Response(AuctionSerializer(auctions,many=True).data, status= status.HTTP_200_OK)
+        else:
+            return Response([],status=status.HTTP_404_NOT_FOUND)
+
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Shipment.objects.all()
@@ -273,11 +282,10 @@ class PaymentMethodViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 class AuctionViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Auction.objects.all()
     serializer_class = AuctionSerializer
-    permission_classes = [IsShipper]
-    # def get_permissions(self):
-    #     if self.action in ['create']:
-    #         return [IsShipper]
-    #     return [permissions.AllowAny]
+    def get_permissions(self):
+        if self.action in ['create']:
+            self.permission_classes = [IsShipper]
+        return super(AuctionViewSet, self).get_permissions()
 
     def create(self, request, *args, **kwargs):
         job = request.data.get('job')
