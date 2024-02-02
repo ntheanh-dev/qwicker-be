@@ -108,16 +108,23 @@ class JobSerializer(ModelSerializer):
         return representation
 
 
+class ProductCategorySerializer(ModelSerializer):
+    class Meta:
+        model = ProductCategory
+        fields = '__all__'
+
+
 class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
 
-
-class ProductCategorySerializer(ModelSerializer):
-    class Meta:
-        model = ProductCategory
-        fields = '__all__'
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        if instance.category:
+            representation['category'] = ProductCategorySerializer(instance.category).data
+        return representation
 
 
 class AddressSerializer(ModelSerializer):
@@ -146,11 +153,18 @@ class ShipmentSerializer(ModelSerializer):
     def create(self, validated_data):
         data = validated_data.copy()
         s = Shipment(**data)
-
         if s.type == Shipment.Type.NOW:
             s.shipping_date = timezone.now()
         s.save()
         return s
+
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        if instance.pick_up and instance.delivery_address:
+            representation['pick_up'] = AddressSerializer(instance.pick_up).data
+            representation['delivery_address'] = AddressSerializer(instance.delivery_address).data
+        return representation
 
 
 class AuctionSerializer(ModelSerializer):
@@ -161,13 +175,39 @@ class AuctionSerializer(ModelSerializer):
         fields = '__all__'
 
 
+class PaymentMethodSerializer(ModelSerializer):
+    class Meta:
+        model = PaymentMethod
+        fields = '__all__'
+
+
 class PaymentSerializer(ModelSerializer):
     class Meta:
         model = Payment
         fields = '__all__'
 
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        if instance.method:
+            representation['method'] = PaymentMethodSerializer(instance.method).data
+        return representation
 
-class PaymentMethodSerializer(ModelSerializer):
+
+class JobSerializer(ModelSerializer):
     class Meta:
-        model = PaymentMethod
+        model = Job
         fields = '__all__'
+
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        try:
+            representation['uuid'] = str(instance.uuid.int)[:12]
+            representation['payment'] = PaymentSerializer(instance.payment).data
+            representation['product'] = ProductSerializer(instance.product).data
+            representation['shipment'] = ShipmentSerializer(instance.shipment).data
+            representation['vehicle'] = VehicleSerializer(instance.vehicle).data
+        except AttributeError:
+            pass
+        return representation

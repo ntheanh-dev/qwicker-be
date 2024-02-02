@@ -94,6 +94,14 @@ class ProductCategory(models.Model):
 
 
 class Job(BaseModel):
+    class Status(models.TextChoices):
+        FINDING_SHIPPER = "FINDING_SHIPPER", "FINDING_SHIPPER"
+        WAITING_PAY = "WAITING_PAY", 'WAITING_PAY'
+        SHIPPING = 'SHIPPING', 'SHIPPING'
+        DONE = 'DONE', 'DONE'
+        CANCELED = 'CANCELED', 'CANCELED'
+
+    status = models.CharField(max_length=50, choices=Status.choices, default=Status.FINDING_SHIPPER)
     uuid = models.UUIDField(default=uuid.uuid4(), editable=False, unique=True)
     poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, related_name='job_vehicle', on_delete=models.CASCADE)
@@ -108,8 +116,6 @@ class Auction(models.Model):
     job = models.ForeignKey(Job, related_name='auction_job', on_delete=models.CASCADE)
     shipper = models.ForeignKey(Shipper, related_name='auction_shipper', on_delete=models.CASCADE)
     time_joined = models.DateTimeField(auto_now=True)
-    comment = models.CharField(max_length=255)
-    # maybe add cost filed used for auctioning
 
 
 class Feedback(models.Model):

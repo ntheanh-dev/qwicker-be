@@ -189,66 +189,6 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             print(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], detail=False)
-    @transaction.atomic()
-    def post_job(self, request):
-        try:
-            job_data = json.loads(request.data.get('job'))
-            upload_result = cloudinary.uploader.upload(request.data.get('image'), folder='job_image')
-            job_data['image'] = upload_result['url']
-
-            products_data = json.loads(request.data.get('products'))
-            shipment_data = json.loads(request.data.get('shipment'))
-
-            user = request.user
-            job_data['poster'] = user.id
-
-            with transaction.atomic():
-                job = JobSerializer(data=job_data, )
-                job.is_valid(raise_exception=True)
-                job_instance = job.save()
-                products = []
-
-                with transaction.atomic():
-                    for product in products_data:
-                        product['job'] = job_instance.id
-                        p = ProductSerializer(data=product)
-                        p.is_valid(raise_exception=True)
-                        p.save()
-                        products.append(p.data)
-
-                with transaction.atomic():
-                    pick_up_data = shipment_data['pick_up']
-                    delivery_address_data = shipment_data['delivery_address']
-
-                    pick_up = AddressSerializer(data=pick_up_data)
-                    pick_up.is_valid(raise_exception=True)
-                    pick_up.save()
-
-                    delivery_address = AddressSerializer(data=delivery_address_data)
-                    delivery_address.is_valid(raise_exception=True)
-                    delivery_address.save()
-
-                    shipment_data['delivery_address'] = delivery_address.data['id']
-                    shipment_data['pick_up'] = pick_up.data['id']
-                    shipment_data['job'] = job.data['id']
-
-                    shipment = ShipmentSerializer(data=shipment_data)
-                    shipment.is_valid(raise_exception=True)
-
-                    shipment_responce = {**shipment.data, 'delivery_address': {**delivery_address.data},
-                                         'pick_up': {**pick_up.data}}
-
-                responce_data = {
-                    'job': {**job.data},
-                    'products': products,
-                    'shipment': {**shipment_responce}
-                }
-            return Response(json.dumps(responce_data), status=status.HTTP_201_CREATED)
-        except Exception as e:
-            print(f"Error in outer function: {e}")
-            return Response(e, status=status.HTTP_400_BAD_REQUEST)
-
     @action(methods=['get'], detail=False)
     def jobs(self, request):
         fromDate = request.query_params.get('fromDate')
