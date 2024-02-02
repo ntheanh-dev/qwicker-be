@@ -259,6 +259,23 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             return Response([],status=status.HTTP_404_NOT_FOUND)
 
 
+class ShipperJobViewSet(viewsets.ViewSet,viewsets.ModelViewSet):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializer
+
+    def get_permissions(self):
+        if self.action in ['find_job']:
+            self.permission_classes = [IsShipper]
+        return super(ShipperJobViewSet, self).get_permissions()
+
+    @action(methods=['get'], detail=False, url_path='find-job')
+    def find_job(self,request):
+        queryset = self.get_queryset().filter(status=Job.Status.FINDING_SHIPPER)
+        return Response(JobSerializer(queryset,many=True).data,status=status.HTTP_200_OK)
+
+
+
+
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = Shipment.objects.all()
     serializer_class = ShipmentSerializer
