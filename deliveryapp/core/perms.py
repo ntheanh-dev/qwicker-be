@@ -14,3 +14,15 @@ class IsShipper(permissions.BasePermission):
         else:
             return request.user.role == User.Roles.SHIPPER
 
+
+class IsBasicUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_anonymous:
+            return False
+        else:
+            return request.user.role == User.Roles.BASIC_USER
+
+
+class BasicUserOwnerJob(IsBasicUser):
+    def has_object_permission(self, request, view, job):
+        return request.user and request.user == job.poster
