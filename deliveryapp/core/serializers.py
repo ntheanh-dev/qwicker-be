@@ -124,6 +124,7 @@ class ProductSerializer(ModelSerializer):
         representation = super().to_representation(instance)
         if instance.category:
             representation['category'] = ProductCategorySerializer(instance.category).data
+            representation['image'] = instance.image.url
         return representation
 
 

@@ -1,9 +1,9 @@
 import json
-from django.db import transaction
+from django.db import transaction,IntegrityError
 from django.http import HttpResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
-from .perms import JobOwner
+from .perms import JobOwner, IsShipper
 from .serializers import *
 from rest_framework.decorators import action
 from rest_framework.views import Response
@@ -12,6 +12,7 @@ import cloudinary.uploader
 from datetime import datetime
 import random
 from deliveryapp.celery import send_mail_func
+
 
 # Create your views here.
 class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
@@ -162,7 +163,6 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                 delivery_address.save()
                 # Shipment
                 s = cleaned_data['shipment']
-                print(s)
                 s['pick_up'] = pick_up.data['id']
                 s['delivery_address'] = delivery_address.data['id']
                 shipment = ShipmentSerializer(data=s)
@@ -183,7 +183,7 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                 job_instance.is_valid(raise_exception=True)
                 job_instance.save()
 
-                return Response(job_instance.data, status=status.HTTP_200_OK)
+                return Response(job_instance.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             print(e)
@@ -268,3 +268,25 @@ class PaymentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 class PaymentMethodViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
+
+
+class AuctionViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+    queryset = Auction.objects.all()
+    serializer_class = AuctionSerializer
+    permission_classes = [IsShipper]
+    # def get_permissions(self):
+    #     if self.action in ['create']:
+    #         return [IsShipper]
+    #     return [permissions.AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        job = request.data.get('job')
+        shipper = request.data.get('shipper')
+        if job and shipper is not None:
+            try:
+                a = Auction.objects.create(job_id=job,shipper_id=shipper)
+                return Response(AuctionSerializer(a).data,status=status.HTTP_201_CREATED)
+            except IntegrityError:
+                return Response(data={'error_msg': "job or shipper does not exist!"},status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(data={'error_msg': "Job and shipper are required!!!"},status=status.HTTP_400_BAD_REQUEST)

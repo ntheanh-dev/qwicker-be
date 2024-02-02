@@ -96,13 +96,14 @@ class ProductCategory(models.Model):
 class Job(BaseModel):
     class Status(models.TextChoices):
         FINDING_SHIPPER = "FINDING_SHIPPER", "FINDING_SHIPPER"
+        WAITING_SHIPPER = "WAITING_SHIPPER",'WAITING_SHIPPER'
         WAITING_PAY = "WAITING_PAY", 'WAITING_PAY'
         SHIPPING = 'SHIPPING', 'SHIPPING'
         DONE = 'DONE', 'DONE'
         CANCELED = 'CANCELED', 'CANCELED'
 
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.FINDING_SHIPPER)
-    uuid = models.UUIDField(default=uuid.uuid4(), editable=False, unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4(), editable=False)
     poster = models.ForeignKey(User, related_name='job_poster', on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, related_name='job_vehicle', on_delete=models.CASCADE)
     description = models.CharField(max_length=255, null=True)
@@ -130,7 +131,7 @@ class Feedback(models.Model):
 class Shipment(models.Model):
     class Type(models.TextChoices):
         NOW = "Now", "NOW"
-        LATTER = "Latter", 'Latter'
+        LATTER = "Latter", 'LATTER'
 
     pick_up = models.ForeignKey('Address', related_name='shipment_pickup', on_delete=models.CASCADE)
     delivery_address = models.ForeignKey('Address', related_name='shipment_delivery_address', on_delete=models.CASCADE)
