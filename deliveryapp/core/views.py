@@ -215,7 +215,7 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 
     @action(methods=['get'], detail=False, url_path='my-jobs')
     def my_jobs(self, request):
-        job_status = request.data.get('status')
+        job_status = request.query_params.get('status')
         if job_status:
             jobs_data = get_jobs_data({'poster_id': request.user.id, 'status': job_status})
             return Response(jobs_data, status=status.HTTP_200_OK)
@@ -261,8 +261,12 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 
     @action(methods=['get'], detail=False, url_path='find-job')
     def find_job(self, request):
-        queryset = self.get_queryset().filter(status=Job.Status.FINDING_SHIPPER)
-        return Response(JobSerializer(queryset, many=True).data, status=status.HTTP_200_OK)
+        job_status = request.query_params.get('status')
+        if job_status:
+            jobs_data = get_jobs_data({'status': job_status})
+            return Response(jobs_data, status=status.HTTP_200_OK)
+        else:
+            return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
