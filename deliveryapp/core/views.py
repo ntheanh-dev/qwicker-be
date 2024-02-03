@@ -81,7 +81,6 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
     @transaction.atomic()
     def create(self, request, *args, **kwargs):
         data = request.data
-
         try:
             basic_account_info = {key: data.getlist(key) if len(data.getlist(key)) > 1 else data[key] for key in data}
             selected_fields = ['cmnd', 'vehicle', 'vehicle_number']
@@ -94,6 +93,7 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
             additional_info['user'] = s_instance.id
             sm = ShipperMoreSerializer(data=additional_info)
             sm.is_valid(raise_exception=True)
+            sm.save()
             return Response(ShipperSerializer(s_instance).data, status=status.HTTP_201_CREATED)
         except:
             return Response({'invalid fields were sent'}, status=status.HTTP_400_BAD_REQUEST)
@@ -239,13 +239,13 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['get'], detail=True, url_path='get-auction')
-    def get_auction(self, request, pk):
+    @action(methods=['get'], detail=True, url_path='list-shipper')
+    def list_shipper(self, request, pk):
         user = request.user
         job = Job.objects.filter(poster_id=user.id, id=pk).prefetch_related('auction_job')
         if job:
-            auctions = [auction for auction in job[0].auction_job.all()]
-            return Response(AuctionSerializer(auctions, many=True).data, status=status.HTTP_200_OK)
+            shipper = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
+            return Response(ShipperSerializer(shipper, many=True).data, status=status.HTTP_200_OK)
         else:
             return Response([], status=status.HTTP_404_NOT_FOUND)
 
@@ -267,7 +267,6 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             jobs_query = Job.objects.filter(status=job_status).select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address',
                                                     'product', 'product__category', 'payment', 'payment__method','vehicle').prefetch_related('auction_job')
             jobs_data = JobSerializer(jobs_query, many=True).data
-            removeItemIndex = []
             data = []
             for i in range(len(jobs_data)):
                 # Check joined this job or not
@@ -307,6 +306,7 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                     return Response({"you're joined this job before"}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response({"job is not in finding shipper state"}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
