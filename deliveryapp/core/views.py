@@ -255,7 +255,7 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = JobSerializer
 
     def get_permissions(self):
-        if self.action in ['find_job']:
+        if self.action in ['find_job','job']:
             self.permission_classes = [IsShipper]
         return super(ShipperJobViewSet, self).get_permissions()
 
@@ -267,6 +267,12 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             return Response(jobs_data, status=status.HTTP_200_OK)
         else:
             return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['get'], detail=True, url_path='job')
+    def job(self, request, pk=None):
+        jobs_data = get_jobs_data({'id': pk})
+        shipper_count = Auction.objects.filter(job__id=pk).count()
+        return Response({'job': jobs_data[0], 'joined_shipper': shipper_count}, status=status.HTTP_200_OK)
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
