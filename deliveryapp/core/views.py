@@ -268,11 +268,22 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         else:
             return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['get'], detail=True, url_path='job')
+    @action(methods=['get','post'], detail=True, url_path='job')
     def job(self, request, pk=None):
-        jobs_data = get_jobs_data({'id': pk})
-        shipper_count = Auction.objects.filter(job__id=pk).count()
-        return Response({'job': jobs_data[0], 'joined_shipper': shipper_count}, status=status.HTTP_200_OK)
+        if request.method == "GET":
+            jobs_data = get_jobs_data({'id': pk})
+            shipper_count = Auction.objects.filter(job__id=pk).count()
+            return Response({'job': jobs_data[0], 'joined_shipper': shipper_count}, status=status.HTTP_200_OK)
+        elif request.method == "POST":
+            job = Job.objects.get(pk=pk)
+            if job.status == Job.Status.FINDING_SHIPPER:
+                try:
+                    Auction.objects.create(job_id=pk,shipper_id=request.user.id)
+                    return Response({"join successfully"}, status=status.HTTP_201_CREATED)
+                except IntegrityError:
+                    return Response({"you're joined this job before"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({"job is not in finding shipper state"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
