@@ -262,9 +262,32 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     @action(methods=['get'], detail=False, url_path='find-job')
     def find_job(self, request):
         job_status = request.query_params.get('status')
+        shipper = request.user
         if job_status:
-            jobs_data = get_jobs_data({'status': job_status})
-            return Response(jobs_data, status=status.HTTP_200_OK)
+            jobs_query = Job.objects.filter(status=job_status).select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address',
+                                                    'product', 'product__category', 'payment', 'payment__method','vehicle').prefetch_related('auction_job')
+            jobs_data = JobSerializer(jobs_query, many=True).data
+            removeItemIndex = []
+            data = []
+            for i in range(len(jobs_data)):
+                # Check joined this job or not
+                is_join = [action for a in jobs_query[i].auction_job.all() if a.shipper.id == shipper.id]
+                if len(is_join) == 0:
+                    # shipment
+                    jobs_data[i]['shipment'] = ShipmentSerializer(jobs_query[i].shipment).data
+                    jobs_data[i]['shipment']['pick_up'] = AddressSerializer(jobs_query[i].shipment.pick_up).data
+                    jobs_data[i]['shipment']['delivery_address'] = AddressSerializer(
+                        jobs_query[i].shipment.delivery_address).data
+                    # Product
+                    jobs_data[i]['product'] = ProductSerializer(jobs_query[i].product).data
+                    jobs_data[i]['product']['category'] = ProductCategorySerializer(jobs_query[i].product.category).data
+                    # Payment
+                    jobs_data[i]['payment'] = PaymentSerializer(jobs_query[i].payment).data
+                    jobs_data[i]['payment']['method'] = PaymentMethodSerializer(jobs_query[i].payment.method).data
+                    # Vehicle
+                    jobs_data[i]['vehicle'] = VehicleSerializer(jobs_query[i].vehicle).data
+                    data.append(jobs_data[i])
+            return Response(data, status=status.HTTP_200_OK)
         else:
             return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
