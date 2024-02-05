@@ -12,7 +12,7 @@ import cloudinary.uploader
 from datetime import datetime
 import random
 from .ultils import *
-from deliveryapp.celery import send_otp,send_apologia
+from deliveryapp.celery import send_otp, send_apologia
 
 
 # Create your views here.
@@ -215,31 +215,32 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 
     @action(methods=['get'], detail=False, url_path='my-jobs')
     def my_jobs(self, request):
+        params = {'poster_id': request.user.id}
+        job_id = request.query_params.get('id')
+        if job_id:
+            params['id'] = int(job_id)
         job_status = request.query_params.get('status')
         if job_status:
-            jobs_data = get_jobs_data({'poster_id': request.user.id, 'status': job_status})
-            return Response(jobs_data, status=status.HTTP_200_OK)
-        else:
-            return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
+            params['status'] = job_status
+        jobs_data = get_jobs_data(params)
+        return Response(jobs_data, status=status.HTTP_200_OK)
 
-
-    @action(methods=['post'], detail=True,url_path='assign')
-    def assign(self, request,pk=None):
+    @action(methods=['post'], detail=True, url_path='assign')
+    def assign(self, request, pk=None):
         shipper_id = request.data.get('shipper')
         if shipper_id:
             job = Job.objects.filter(id=pk).prefetch_related('auction_job')
             shippers = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
-            # for shipper in shippers:
-            #     send_apologia.delay(shipper.email)
-            job[0].winner = Shipper.objects.get(pk=int(shipper_id))
-            job[0].status = Job.Status.WAITING_SHIPPER
-            job[0].save()
-            return Response(status=status.HTTP_200_OK)
+            for shipper in shippers:
+                send_apologia.delay(shipper.email)
+            setattr(job[0], 'winner_id', int(shipper_id))
+            j = Job.objects.get(pk=pk)
+            j.status = Job.Status.WAITING_SHIPPER
+            j.winner_id = shipper_id
+            j.save(update_fields=['status', 'winner_id'])
+            return Response(JobSerializer(job[0], context={'request': request}).data, status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-
-
-
 
     @action(methods=['get'], detail=True, url_path='list-shipper')
     def list_shipper(self, request, pk):
@@ -257,7 +258,7 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = JobSerializer
 
     def get_permissions(self):
-        if self.action in ['find_job','job']:
+        if self.action in ['find_job', 'job']:
             self.permission_classes = [IsShipper]
         return super(ShipperJobViewSet, self).get_permissions()
 
@@ -266,8 +267,11 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         job_status = request.query_params.get('status')
         shipper = request.user
         if job_status:
-            jobs_query = Job.objects.filter(status=job_status).select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address',
-                                                    'product', 'product__category', 'payment', 'payment__method','vehicle').prefetch_related('auction_job')
+            jobs_query = Job.objects.filter(status=job_status).select_related('shipment', 'shipment__pick_up',
+                                                                              'shipment__delivery_address',
+                                                                              'product', 'product__category', 'payment',
+                                                                              'payment__method',
+                                                                              'vehicle').prefetch_related('auction_job')
             jobs_data = JobSerializer(jobs_query, many=True).data
             data = []
             for i in range(len(jobs_data)):
@@ -292,7 +296,7 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         else:
             return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['get','post'], detail=True, url_path='job')
+    @action(methods=['get', 'post'], detail=True, url_path='job')
     def job(self, request, pk=None):
         if request.method == "GET":
             jobs_data = get_jobs_data({'id': pk})
@@ -302,13 +306,12 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             job = Job.objects.get(pk=pk)
             if job.status == Job.Status.FINDING_SHIPPER:
                 try:
-                    Auction.objects.create(job_id=pk,shipper_id=request.user.id)
+                    Auction.objects.create(job_id=pk, shipper_id=request.user.id)
                     return Response({"join successfully"}, status=status.HTTP_201_CREATED)
                 except IntegrityError:
                     return Response({"you're joined this job before"}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response({"job is not in finding shipper state"}, status=status.HTTP_404_NOT_FOUND)
-
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
