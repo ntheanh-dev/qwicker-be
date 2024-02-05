@@ -63,21 +63,6 @@ class ShipperSerializer(ModelSerializer):
         return u
 
 
-class ShipperMoreSerializer(ModelSerializer):
-    class Meta:
-        model = ShipperMore
-        fields = ['vehicle_number','cmnd','vehicle']
-
-    def to_representation(self, instance):
-        # Customize the representation of the serialized data here
-        representation = super().to_representation(instance)
-        try:
-            representation['cmnd'] = instance.cmnd.url
-        except AttributeError:
-            pass
-        return representation
-
-
 class VehicleSerializer(ModelSerializer):
     class Meta:
         model = Vehicle
@@ -88,6 +73,23 @@ class VehicleSerializer(ModelSerializer):
         representation = super().to_representation(instance)
         try:
             representation['icon'] = instance.icon.url
+        except AttributeError:
+            pass
+        return representation
+
+
+class ShipperMoreSerializer(ModelSerializer):
+    vehicle = VehicleSerializer()
+
+    class Meta:
+        model = ShipperMore
+        fields = ['vehicle_number', 'cmnd', 'vehicle']
+
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        try:
+            representation['cmnd'] = instance.cmnd.url
         except AttributeError:
             pass
         return representation

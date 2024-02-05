@@ -12,7 +12,7 @@ import cloudinary.uploader
 from datetime import datetime
 import random
 from .ultils import *
-from deliveryapp.celery import send_mail_func
+from deliveryapp.celery import send_otp,send_apologia
 
 
 # Create your views here.
@@ -39,7 +39,7 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
             otp = random.randint(1000, 9999)
             receiver = request.data.get('email')
             first_name = request.data.get('first_name')
-            send_mail_func.delay(receiver, otp, first_name)
+            send_otp.delay(receiver, otp, first_name)
             cache.set(receiver, str(otp), 60)
             return Response({}, status=status.HTTP_200_OK)
         else:
@@ -190,28 +190,28 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             print(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['get'], detail=False)
-    def jobs(self, request):
-        fromDate = request.query_params.get('fromDate')
-        toDate = request.query_params.get('toDate')
-        jobs_query = None
-        if fromDate and toDate:
-            fD = datetime.strptime(fromDate, '%d/%m/%Y')
-            tD = datetime.strptime(toDate, '%d/%m/%Y')
-            jobs_query = Job.objects.filter(is_active=True, shipment_job__shipping_date__gte=fD,
-                                            shipment_job__expected_delivery_date__lte=tD).prefetch_related(
-                'shipment_job', 'product_job')
-        else:
-            jobs_query = Job.objects.filter(is_active=True).prefetch_related('shipment_job', 'product_job')
-        jobs_data = JobSerializer(jobs_query, many=True).data
-
-        for i in range(len(jobs_data)):
-            shipment = [shipment for shipment in
-                        jobs_query[i].shipment_job.all().select_related('pick_up', 'delivery_address')]
-            jobs_data[i]['shipment'] = ShipmentSerializer(shipment[0]).data
-            products = [products for products in jobs_query[i].product_job.all()]
-            jobs_data[i]['products'] = ProductSerializer(products, many=True).data
-        return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
+    # @action(methods=['get'], detail=False)
+    # def jobs(self, request):
+    #     fromDate = request.query_params.get('fromDate')
+    #     toDate = request.query_params.get('toDate')
+    #     jobs_query = None
+    #     if fromDate and toDate:
+    #         fD = datetime.strptime(fromDate, '%d/%m/%Y')
+    #         tD = datetime.strptime(toDate, '%d/%m/%Y')
+    #         jobs_query = Job.objects.filter(is_active=True, shipment_job__shipping_date__gte=fD,
+    #                                         shipment_job__expected_delivery_date__lte=tD).prefetch_related(
+    #             'shipment_job', 'product_job')
+    #     else:
+    #         jobs_query = Job.objects.filter(is_active=True).prefetch_related('shipment_job', 'product_job')
+    #     jobs_data = JobSerializer(jobs_query, many=True).data
+    #
+    #     for i in range(len(jobs_data)):
+    #         shipment = [shipment for shipment in
+    #                     jobs_query[i].shipment_job.all().select_related('pick_up', 'delivery_address')]
+    #         jobs_data[i]['shipment'] = ShipmentSerializer(shipment[0]).data
+    #         products = [products for products in jobs_query[i].product_job.all()]
+    #         jobs_data[i]['products'] = ProductSerializer(products, many=True).data
+    #     return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
 
     @action(methods=['get'], detail=False, url_path='my-jobs')
     def my_jobs(self, request):
@@ -222,22 +222,24 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         else:
             return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], detail=False)
-    def accept(self, request):
-        job_id = request.data.get('job')
+
+    @action(methods=['post'], detail=True,url_path='assign')
+    def assign(self, request,pk=None):
         shipper_id = request.data.get('shipper')
-        user = request.user
-        if job_id and shipper_id:
-            try:
-                job = Job.objects.get(pk=int(job_id), poster_id=user.id)
-                shipper = Shipper.objects.get(pk=int(shipper_id))
-                job.winner = shipper
-                job.save()
-                return Response(status=status.HTTP_200_OK)
-            except Job.DoesNotExist:
-                return Response({'Poster not found'}, status=status.HTTP_400_BAD_REQUEST)
+        if shipper_id:
+            job = Job.objects.filter(id=pk).prefetch_related('auction_job')
+            shippers = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
+            # for shipper in shippers:
+            #     send_apologia.delay(shipper.email)
+            job[0].winner = Shipper.objects.get(pk=int(shipper_id))
+            job[0].status = Job.Status.WAITING_SHIPPER
+            job[0].save()
+            return Response(status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
     @action(methods=['get'], detail=True, url_path='list-shipper')
     def list_shipper(self, request, pk):

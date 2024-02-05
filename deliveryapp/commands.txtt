@@ -1,2 +1,0 @@
-# Run celery
-celery -A delivery worker -l info --pool=solo
