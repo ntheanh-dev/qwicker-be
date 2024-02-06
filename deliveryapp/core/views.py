@@ -3,6 +3,7 @@ from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
+from .paginator import JobPaginator
 from .perms import *
 from .serializers import *
 from rest_framework.decorators import action
@@ -183,35 +184,11 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                 job_instance = JobSerializer(data=job)
                 job_instance.is_valid(raise_exception=True)
                 job_instance.save()
-                job_data = get_jobs_data({'id': job_instance.data['id']})
-                return Response(job_data[0], status=status.HTTP_201_CREATED)
+                return Response(job_instance.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             print(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
-
-    # @action(methods=['get'], detail=False)
-    # def jobs(self, request):
-    #     fromDate = request.query_params.get('fromDate')
-    #     toDate = request.query_params.get('toDate')
-    #     jobs_query = None
-    #     if fromDate and toDate:
-    #         fD = datetime.strptime(fromDate, '%d/%m/%Y')
-    #         tD = datetime.strptime(toDate, '%d/%m/%Y')
-    #         jobs_query = Job.objects.filter(is_active=True, shipment_job__shipping_date__gte=fD,
-    #                                         shipment_job__expected_delivery_date__lte=tD).prefetch_related(
-    #             'shipment_job', 'product_job')
-    #     else:
-    #         jobs_query = Job.objects.filter(is_active=True).prefetch_related('shipment_job', 'product_job')
-    #     jobs_data = JobSerializer(jobs_query, many=True).data
-    #
-    #     for i in range(len(jobs_data)):
-    #         shipment = [shipment for shipment in
-    #                     jobs_query[i].shipment_job.all().select_related('pick_up', 'delivery_address')]
-    #         jobs_data[i]['shipment'] = ShipmentSerializer(shipment[0]).data
-    #         products = [products for products in jobs_query[i].product_job.all()]
-    #         jobs_data[i]['products'] = ProductSerializer(products, many=True).data
-    #     return HttpResponse(json.dumps(jobs_data), status=status.HTTP_200_OK)
 
     @action(methods=['get'], detail=False, url_path='my-jobs')
     def my_jobs(self, request):
@@ -254,8 +231,12 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
 
 
 class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = Job.objects.all()
+    queryset = Job.objects.select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address', 'product',
+                                          'product__category', 'payment',
+                                          'payment__method',
+                                          'vehicle').prefetch_related('auction_job')
     serializer_class = JobSerializer
+    pagination_class = JobPaginator
 
     def get_permissions(self):
         if self.action in ['find_job', 'job']:
@@ -265,34 +246,12 @@ class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     @action(methods=['get'], detail=False, url_path='find-job')
     def find_job(self, request):
         job_status = request.query_params.get('status')
-        shipper = request.user
+        # shipper = request.user
         if job_status:
-            jobs_query = Job.objects.filter(status=job_status).select_related('shipment', 'shipment__pick_up',
-                                                                              'shipment__delivery_address',
-                                                                              'product', 'product__category', 'payment',
-                                                                              'payment__method',
-                                                                              'vehicle').prefetch_related('auction_job')
-            jobs_data = JobSerializer(jobs_query, many=True).data
-            data = []
-            for i in range(len(jobs_data)):
-                # Check joined this job or not
-                is_join = [action for a in jobs_query[i].auction_job.all() if a.shipper.id == shipper.id]
-                if len(is_join) == 0:
-                    # shipment
-                    jobs_data[i]['shipment'] = ShipmentSerializer(jobs_query[i].shipment).data
-                    jobs_data[i]['shipment']['pick_up'] = AddressSerializer(jobs_query[i].shipment.pick_up).data
-                    jobs_data[i]['shipment']['delivery_address'] = AddressSerializer(
-                        jobs_query[i].shipment.delivery_address).data
-                    # Product
-                    jobs_data[i]['product'] = ProductSerializer(jobs_query[i].product).data
-                    jobs_data[i]['product']['category'] = ProductCategorySerializer(jobs_query[i].product.category).data
-                    # Payment
-                    jobs_data[i]['payment'] = PaymentSerializer(jobs_query[i].payment).data
-                    jobs_data[i]['payment']['method'] = PaymentMethodSerializer(jobs_query[i].payment.method).data
-                    # Vehicle
-                    jobs_data[i]['vehicle'] = VehicleSerializer(jobs_query[i].vehicle).data
-                    data.append(jobs_data[i])
-            return Response(data, status=status.HTTP_200_OK)
+            jobs_query = self.paginate_queryset(self.queryset.filter(status=job_status))
+            jobs_data = self.serializer_class(data=jobs_query, many=True)
+            jobs_data.is_valid()
+            return Response(self.get_paginated_response(jobs_data.data), status=status.HTTP_200_OK)
         else:
             return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
 
