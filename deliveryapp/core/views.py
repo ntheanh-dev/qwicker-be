@@ -1,6 +1,6 @@
 import json
 from django.db import transaction, IntegrityError
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, FilteredRelation
 from django.http import HttpResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
@@ -239,7 +239,8 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retriev
                                           'vehicle')
     serializer_class = JobSerializer
     pagination_class = JobPaginator
-    permission_classes = [IsShipper]
+
+    # permission_classes = [IsShipper]
 
     def list(self, request, *args, **kwargs):
         query = self.get_queryset()
@@ -253,7 +254,8 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retriev
 
     @action(methods=['get'], detail=False, url_path='find')
     def find(self, request):
-        query = self.get_queryset().filter(status=Job.Status.FINDING_SHIPPER).prefetch_related((Prefetch('auction_job', Auction.objects.filter(~Q(shipper_id=request.user.id)))))
+        # query = self.get_queryset().filter(status=Job.Status.FINDING_SHIPPER).prefetch_related((Prefetch('auction_job', Auction.objects.filter(~Q(shipper_id=request.user.id)))))
+        query = self.get_queryset().filter(~Q(auction_job__shipper_id=request.user.id) & Q(status=Job.Status.FINDING_SHIPPER))
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
