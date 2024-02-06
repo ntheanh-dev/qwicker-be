@@ -7,7 +7,7 @@ class JobOwner(permissions.IsAuthenticated):
         return request.user and request.user == job.poster
 
 
-class IsShipper(permissions.BasePermission):
+class IsShipper(permissions.IsAuthenticated):
     def has_permission(self, request, view):
         if request.user.is_anonymous:
             return False
@@ -33,3 +33,4 @@ class BasicUserOwnerJob(permissions.IsAuthenticated):
     def has_object_permission(self, request, view, job):
         print(job)
         return self.has_permission(request,view) and request.user == job.poster
+

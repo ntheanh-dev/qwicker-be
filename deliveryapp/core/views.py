@@ -1,12 +1,13 @@
 import json
 from django.db import transaction, IntegrityError
+from django.db.models import Prefetch, Q
 from django.http import HttpResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
 from .paginator import JobPaginator
 from .perms import *
 from .serializers import *
-from rest_framework.decorators import action
+from rest_framework.decorators import action, permission_classes
 from rest_framework.views import Response
 from django.core.cache import cache
 import cloudinary.uploader
@@ -200,8 +201,8 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
 
     def retrieve(self, request, *args, **kwargs):
-        query = self.get_queryset().filter(poster=request.user.id).first()
-        return Response(self.serializer_class(query).data,status=status.HTTP_200_OK)
+        query = self.get_queryset().filter(id=int(kwargs['pk']), poster=request.user.id).first()
+        return Response(self.serializer_class(query).data, status=status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='assign')
     def assign(self, request, pk=None):
@@ -218,7 +219,7 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             j.save(update_fields=['status', 'winner_id'])
             return Response(JobSerializer(job[0], context={'request': request}).data, status=status.HTTP_200_OK)
         else:
-            return Response({'shipper_id is required'},status=status.HTTP_400_BAD_REQUEST)
+            return Response({'shipper_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], detail=True, url_path='list-shipper')
     def list_shipper(self, request, pk):
@@ -231,47 +232,51 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             return Response([], status=status.HTTP_404_NOT_FOUND)
 
 
-class ShipperJobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class ShipperJobViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
     queryset = Job.objects.select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address', 'product',
                                           'product__category', 'payment',
                                           'payment__method',
-                                          'vehicle').prefetch_related('auction_job')
+                                          'vehicle')
     serializer_class = JobSerializer
     pagination_class = JobPaginator
+    permission_classes = [IsShipper]
 
-    def get_permissions(self):
-        if self.action in ['find_job', 'job']:
-            self.permission_classes = [IsShipper]
-        return super(ShipperJobViewSet, self).get_permissions()
-
-    @action(methods=['get'], detail=False, url_path='find-job')
-    def find_job(self, request):
+    def list(self, request, *args, **kwargs):
+        query = self.get_queryset()
         job_status = request.query_params.get('status')
-        # shipper = request.user
         if job_status:
-            jobs_query = self.paginate_queryset(self.queryset.filter(status=job_status))
-            jobs_data = self.serializer_class(data=jobs_query, many=True)
-            jobs_data.is_valid()
-            return Response(self.get_paginated_response(jobs_data.data), status=status.HTTP_200_OK)
-        else:
-            return Response({'order status is required!!!'}, status=status.HTTP_400_BAD_REQUEST)
+            query = query.filter(status=job_status)
+        query = self.paginate_queryset(query)
+        jobs = self.serializer_class(data=query, many=True)
+        jobs.is_valid()
+        return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
 
-    @action(methods=['get', 'post'], detail=True, url_path='job')
-    def job(self, request, pk=None):
-        if request.method == "GET":
-            jobs_data = get_jobs_data({'id': pk})
-            shipper_count = Auction.objects.filter(job__id=pk).count()
-            return Response({'job': jobs_data[0], 'joined_shipper': shipper_count}, status=status.HTTP_200_OK)
-        elif request.method == "POST":
-            job = Job.objects.get(pk=pk)
-            if job.status == Job.Status.FINDING_SHIPPER:
-                try:
-                    Auction.objects.create(job_id=pk, shipper_id=request.user.id)
-                    return Response({"join successfully"}, status=status.HTTP_201_CREATED)
-                except IntegrityError:
-                    return Response({"you're joined this job before"}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({"job is not in finding shipper state"}, status=status.HTTP_404_NOT_FOUND)
+    @action(methods=['get'], detail=False, url_path='find')
+    def find(self, request):
+        query = self.get_queryset().filter(status=Job.Status.FINDING_SHIPPER).prefetch_related((Prefetch('auction_job', Auction.objects.filter(~Q(shipper_id=request.user.id)))))
+        query = self.paginate_queryset(query)
+        jobs = self.serializer_class(data=query, many=True)
+        jobs.is_valid()
+        return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+        query = Job.objects.get(pk=int(kwargs['pk']))
+        data = self.serializer_class(query).data
+        shipper_count = Auction.objects.filter(job__id=int(kwargs['pk'])).count()
+        data['shipper_count'] = shipper_count
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(methods=['post'], detail=True, url_path='join')
+    def join(self, request, pk=None):
+        job = Job.objects.get(pk=pk)
+        if job.status == Job.Status.FINDING_SHIPPER:
+            try:
+                Auction.objects.create(job_id=pk, shipper_id=request.user.id)
+                return Response({"join successfully"}, status=status.HTTP_201_CREATED)
+            except IntegrityError:
+                return Response({"you've already joined this job"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"job is not in finding shipper state"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):

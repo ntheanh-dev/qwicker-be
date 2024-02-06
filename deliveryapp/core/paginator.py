@@ -3,7 +3,7 @@ from rest_framework.views import Response
 
 
 class JobPaginator(PageNumberPagination):
-    page_size = 2
+    page_size = 4
 
     def get_paginated_response(self, data):
         return {
