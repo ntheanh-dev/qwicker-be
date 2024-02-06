@@ -23,6 +23,13 @@ class IsBasicUser(permissions.BasePermission):
             return request.user.role == User.Roles.BASIC_USER
 
 
-class BasicUserOwnerJob(IsBasicUser):
+class BasicUserOwnerJob(permissions.IsAuthenticated):
+    def has_permission(self, request, view):
+        if request.user.is_anonymous:
+            return False
+        else:
+            return request.user.role == User.Roles.BASIC_USER
+
     def has_object_permission(self, request, view, job):
-        return request.user and request.user == job.poster
+        print(job)
+        return self.has_permission(request,view) and request.user == job.poster

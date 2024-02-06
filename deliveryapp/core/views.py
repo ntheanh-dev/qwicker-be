@@ -121,16 +121,14 @@ class ProductCategoryViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = ProductCategorySerializer
 
 
-class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
-    queryset = Job.objects.all()
+class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView, generics.RetrieveAPIView):
+    queryset = Job.objects.select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address', 'product',
+                                          'product__category', 'payment',
+                                          'payment__method',
+                                          'vehicle').order_by('created_at')
     serializer_class = JobSerializer
-
-    def get_permissions(self):
-        if self.action in ['create']:
-            self.permission_classes = [IsBasicUser]
-        if self.action in ['my_jobs']:
-            self.permission_classes = [BasicUserOwnerJob]
-        return super(JobViewSet, self).get_permissions()
+    pagination_class = JobPaginator
+    permission_classes = [BasicUserOwnerJob]
 
     def create(self, request, *args, **kwargs):
         cleaned_data = {}
@@ -190,17 +188,20 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             print(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['get'], detail=False, url_path='my-jobs')
-    def my_jobs(self, request):
-        params = {'poster_id': request.user.id}
-        job_id = request.query_params.get('id')
-        if job_id:
-            params['id'] = int(job_id)
+    def list(self, request, *args, **kwargs):
+        # query = self.get_queryset()
+        query = self.get_queryset().filter(poster=request.user.id)
         job_status = request.query_params.get('status')
         if job_status:
-            params['status'] = job_status
-        jobs_data = get_jobs_data(params)
-        return Response(jobs_data, status=status.HTTP_200_OK)
+            query = query.filter(status=job_status)
+        query = self.paginate_queryset(query)
+        jobs = self.serializer_class(data=query, many=True)
+        jobs.is_valid()
+        return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+        query = self.get_queryset().filter(poster=request.user.id).first()
+        return Response(self.serializer_class(query).data,status=status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='assign')
     def assign(self, request, pk=None):
@@ -217,7 +218,7 @@ class JobViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
             j.save(update_fields=['status', 'winner_id'])
             return Response(JobSerializer(job[0], context={'request': request}).data, status=status.HTTP_200_OK)
         else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response({'shipper_id is required'},status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['get'], detail=True, url_path='list-shipper')
     def list_shipper(self, request, pk):
