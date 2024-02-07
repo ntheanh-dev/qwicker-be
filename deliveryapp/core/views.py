@@ -194,7 +194,8 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         query = self.get_queryset().filter(poster=request.user.id)
         job_status = request.query_params.get('status')
         if job_status:
-            query = query.filter(status=job_status)
+            status_list = [int(s) for s in job_status.split(',')]
+            query = query.filter(status__in=status_list)
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
@@ -232,30 +233,19 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             return Response([], status=status.HTTP_404_NOT_FOUND)
 
 
-class ShipperJobViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
     queryset = Job.objects.select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address', 'product',
                                           'product__category', 'payment',
                                           'payment__method',
                                           'vehicle')
     serializer_class = JobSerializer
     pagination_class = JobPaginator
-
-    # permission_classes = [IsShipper]
-
-    def list(self, request, *args, **kwargs):
-        query = self.get_queryset()
-        job_status = request.query_params.get('status')
-        if job_status:
-            query = query.filter(status=job_status)
-        query = self.paginate_queryset(query)
-        jobs = self.serializer_class(data=query, many=True)
-        jobs.is_valid()
-        return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
+    permission_classes = [IsShipper]
 
     @action(methods=['get'], detail=False, url_path='find')
     def find(self, request):
-        # query = self.get_queryset().filter(status=Job.Status.FINDING_SHIPPER).prefetch_related((Prefetch('auction_job', Auction.objects.filter(~Q(shipper_id=request.user.id)))))
-        query = self.get_queryset().filter(~Q(auction_job__shipper_id=request.user.id) & Q(status=Job.Status.FINDING_SHIPPER))
+        query = self.get_queryset().filter(
+            ~Q(auction_job__shipper_id=request.user.id) & Q(status=Job.Status.FINDING_SHIPPER))
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
@@ -279,6 +269,17 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retriev
                 return Response({"you've already joined this job"}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"job is not in finding shipper state"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['get'], detail=False, url_path='my-jobs')
+    def my_jobs(self, request):
+        query = self.get_queryset().filter(Q(auction_job__shipper_id=request.user.id))
+        job_status = request.query_params.get('status')
+        if job_status:
+            query = query.filter(status=job_status)
+        query = self.paginate_queryset(query)
+        jobs = self.serializer_class(data=query, many=True)
+        jobs.is_valid()
+        return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
