@@ -12,6 +12,7 @@ from rest_framework.views import Response
 from django.core.cache import cache
 import cloudinary.uploader
 from datetime import datetime
+from django.utils import timezone
 import random
 from .ultils import *
 from deliveryapp.celery import send_otp, send_apologia
@@ -280,6 +281,30 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
         return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
+
+    @action(methods=['post'], detail=True, url_path='complete')
+    def complete(self, request, pk=None):
+        job = Job.objects.filter(id=pk).select_related('payment', 'payment__method').first()
+        if job.status == Job.Status.WAITING_SHIPPER:
+            if job.payment.method.name in ['Momo']:
+                if job.payment.payment_date is None:
+                    job.status = Job.Status.WAITING_PAY
+                    job.save(update_fields=['status'])
+                # is paid
+                else:
+                    job.status = Job.Status.DONE
+                    job.save(update_fields=['status'])
+            # cash
+            else:
+                job.payment.payment_date = timezone.now()
+                job.payment.save(update_fields=['payment_date'])
+
+                job.status = Job.Status.DONE
+                job.save(update_fields=['status'])
+
+            return Response({"complete!!!"},status=status.HTTP_200_OK)
+        else:
+            return Response({"job is not in waiting shipper state"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
