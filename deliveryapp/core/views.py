@@ -152,40 +152,30 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         try:
             with transaction.atomic():
                 # Product
-                product = ProductSerializer(data=cleaned_data['product'])
-                product.is_valid(raise_exception=True)
-                product.save()
+                product = Product.objects.create(**cleaned_data['product'])
                 # Address
-                pick_up = AddressSerializer(data=cleaned_data['pick_up'])
-                pick_up.is_valid(raise_exception=True)
-                pick_up.save()
+                pick_up = Address.objects.create(**cleaned_data['pick_up'])
                 # Address
-                delivery_address = AddressSerializer(data=cleaned_data['delivery_address'])
-                delivery_address.is_valid(raise_exception=True)
-                delivery_address.save()
+                delivery_address = Address.objects.create(**cleaned_data['delivery_address'])
                 # Shipment
-                s = cleaned_data['shipment']
-                s['pick_up'] = pick_up.data['id']
-                s['delivery_address'] = delivery_address.data['id']
-                shipment = ShipmentSerializer(data=s)
-                shipment.is_valid(raise_exception=True)
-                shipment.save()
+                shipment_data = cleaned_data['shipment']
+                shipment_data['pick_up_id'] = pick_up.id
+                shipment_data['delivery_address_id'] = delivery_address.id
+                shipment = Shipment.objects.create(**shipment_data)
                 # Payment
-                payment = PaymentSerializer(data=cleaned_data['payment'])
-                payment.is_valid(raise_exception=True)
-                payment.save()
+                cleaned_data['payment']['is_poster_pay'] = bool(cleaned_data['payment']['is_poster_pay'].lower())
+                payment = Payment.objects.create(**cleaned_data['payment'])
                 # Job
                 job = cleaned_data['order']
-                job['poster'] = request.user.id
-                job['product'] = product.data['id']
-                job['payment'] = payment.data['id']
-                job['shipment'] = shipment.data['id']
+                job['poster_id'] = request.user.id
+                job['product_id'] = product.id
+                job['payment_id'] = payment.id
+                job['shipment_id'] = shipment.id
                 #
-                job_instance = JobSerializer(data=job)
-                job_instance.is_valid(raise_exception=True)
-                job_instance.save()
-                return Response(job_instance.data, status=status.HTTP_201_CREATED)
-
+                job_instance = Job.objects.create(**job)
+                job_seria = JobSerializer(data=job_instance, context={'request': request})
+                job_seria.is_valid()
+                return Response(job_seria.data, status=status.HTTP_201_CREATED)
         except Exception as e:
             print(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
@@ -253,11 +243,14 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
 
     def retrieve(self, request, *args, **kwargs):
-        query = Job.objects.get(pk=int(kwargs['pk']))
-        data = self.serializer_class(query).data
-        shipper_count = Auction.objects.filter(job__id=int(kwargs['pk'])).count()
-        data['shipper_count'] = shipper_count
-        return Response(data, status=status.HTTP_200_OK)
+        try:
+            query = Job.objects.get(pk=int(kwargs['pk']))
+            data = self.serializer_class(query).data
+            shipper_count = Auction.objects.filter(job__id=int(kwargs['pk'])).count()
+            data['shipper_count'] = shipper_count
+            return Response(data, status=status.HTTP_200_OK)
+        except Job.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=True, url_path='join')
     def join(self, request, pk=None):
@@ -302,7 +295,7 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
                 job.status = Job.Status.DONE
                 job.save(update_fields=['status'])
 
-            return Response({"complete!!!"},status=status.HTTP_200_OK)
+            return Response({"complete!!!"}, status=status.HTTP_200_OK)
         else:
             return Response({"job is not in waiting shipper state"}, status=status.HTTP_400_BAD_REQUEST)
 
