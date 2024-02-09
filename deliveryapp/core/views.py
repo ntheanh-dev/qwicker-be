@@ -181,12 +181,15 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):
-        # query = self.get_queryset()
         query = self.get_queryset().filter(poster=request.user.id)
         job_status = request.query_params.get('status')
         if job_status:
-            status_list = [int(s) for s in job_status.split(',')]
+            status_list = [s for s in job_status.split(',')]
             query = query.filter(status__in=status_list)
+
+            if Job.Status.DONE in status_list or Job.Status.WAITING_PAY in status_list:
+                query = query.select_related('winner')
+                self.serializer_class = JobDetailSerializer
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
@@ -202,8 +205,11 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         if shipper_id:
             job = Job.objects.filter(id=pk).prefetch_related('auction_job')
             shippers = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
-            for shipper in shippers:
-                send_apologia.delay(shipper.email)
+            try:
+                for shipper in shippers:
+                    send_apologia.delay(shipper.email)
+            except Exception as e:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             setattr(job[0], 'winner_id', int(shipper_id))
             j = Job.objects.get(pk=pk)
             j.status = Job.Status.WAITING_SHIPPER
@@ -222,6 +228,24 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             return Response(ShipperSerializer(shipper, many=True).data, status=status.HTTP_200_OK)
         else:
             return Response([], status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['post'], detail=True, url_path='feedback')
+    def feedback(self, request, pk=None):
+        job = Job.objects.get(pk=pk)
+        user = request.user
+        if job.poster.id == user.id:
+            try:
+                feedback_data = request.data.dict()
+                feedback_data['job'] = job.id
+                feedback_data['user'] = request.user.id
+                fb = FeedbackSerializer(data=feedback_data)
+                fb.is_valid(raise_exception=True)
+                fb.save()
+                return Response(fb.data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
 
 
 class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
@@ -269,7 +293,8 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         query = self.get_queryset().filter(Q(auction_job__shipper_id=request.user.id))
         job_status = request.query_params.get('status')
         if job_status:
-            query = query.filter(status=job_status)
+            status_list = [int(s) for s in job_status.split(',')]
+            query = query.filter(status__in=status_list)
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()

@@ -46,7 +46,7 @@ class BasicUser(User):
 
 class ShipperManager(BaseUserManager):
     def get_queryset(self):
-        return super().get_queryset().filter(role=User.Roles.SHIPPER)
+        return super().get_queryset().select_related('shippermore').filter(role=User.Roles.SHIPPER)
 
 
 class ShipperMore(models.Model):
@@ -104,13 +104,14 @@ class Job(BaseModel):
 
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.FINDING_SHIPPER)
     uuid = models.UUIDField(default=uuid.uuid4(), editable=False)
-    poster = models.ForeignKey(User,null=True, blank=True, related_name='job_poster', on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle,null=True, blank=True, related_name='job_vehicle', on_delete=models.CASCADE)
+    poster = models.ForeignKey(User, null=True, blank=True, related_name='job_poster', on_delete=models.CASCADE)
+    vehicle = models.ForeignKey(Vehicle, null=True, blank=True, related_name='job_vehicle', on_delete=models.CASCADE)
     description = models.CharField(max_length=255, null=True)
-    product = models.ForeignKey(Product,null=True, blank=True, related_name='job_prd', on_delete=models.CASCADE)
-    winner = models.ForeignKey(Shipper,null=True, blank=True, related_name='job_winner', on_delete=models.CASCADE)
-    payment = models.ForeignKey('Payment',null=True, blank=True, related_name='job_payment', on_delete=models.CASCADE)
-    shipment = models.ForeignKey('Shipment',null=True, blank=True, related_name='job_shipment', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, null=True, blank=True, related_name='job_prd', on_delete=models.CASCADE)
+    winner = models.ForeignKey(Shipper, null=True, blank=True, related_name='job_winner', on_delete=models.CASCADE)
+    payment = models.ForeignKey('Payment', null=True, blank=True, related_name='job_payment', on_delete=models.CASCADE)
+    shipment = models.ForeignKey('Shipment', null=True, blank=True, related_name='job_shipment',
+                                 on_delete=models.CASCADE)
 
 
 class Auction(models.Model):
@@ -121,13 +122,13 @@ class Auction(models.Model):
     class Meta:
         unique_together = ('job', 'shipper')
 
+
 class Feedback(models.Model):
     created_at = models.DateTimeField(auto_now=True)
     user = models.ForeignKey(User, related_name='feedback_user', on_delete=models.CASCADE)
     shipper = models.ForeignKey(Shipper, related_name='feedback_shipper', on_delete=models.CASCADE)
-    satisfaction_rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
-    shipper_cooperation = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
-    overall_rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    job = models.ForeignKey(Job, related_name='feedback_job', on_delete=models.CASCADE)
+    rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
 
 
 class Shipment(models.Model):
@@ -135,8 +136,10 @@ class Shipment(models.Model):
         NOW = "Now", "NOW"
         LATTER = "Latter", 'LATTER'
 
-    pick_up = models.ForeignKey('Address',null=True, blank=True, related_name='shipment_pickup', on_delete=models.CASCADE)
-    delivery_address = models.ForeignKey('Address',null=True, blank=True, related_name='shipment_delivery_address', on_delete=models.CASCADE)
+    pick_up = models.ForeignKey('Address', null=True, blank=True, related_name='shipment_pickup',
+                                on_delete=models.CASCADE)
+    delivery_address = models.ForeignKey('Address', null=True, blank=True, related_name='shipment_delivery_address',
+                                         on_delete=models.CASCADE)
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.NOW)
     shipment_date = models.DateTimeField()
     cost = models.DecimalField(max_digits=8, decimal_places=0, null=True)  # max 90000.000
@@ -167,7 +170,7 @@ class Address(models.Model):
 
 
 class Payment(models.Model):
-    method = models.ForeignKey('PaymentMethod',null=True, blank=True, related_name='job_pmt', on_delete=models.CASCADE)
+    method = models.ForeignKey('PaymentMethod', null=True, blank=True, related_name='job_pmt', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=8, decimal_places=0, null=True)
     is_poster_pay = models.BooleanField(default=True)
     payment_date = models.DateTimeField(null=True)

@@ -95,9 +95,6 @@ class ShipperMoreSerializer(ModelSerializer):
         return representation
 
 
-
-
-
 class ProductCategorySerializer(ModelSerializer):
     class Meta:
         model = ProductCategory
@@ -106,10 +103,10 @@ class ProductCategorySerializer(ModelSerializer):
 
 class ProductSerializer(ModelSerializer):
     category = ProductCategorySerializer(read_only=True)
+
     class Meta:
         model = Product
         fields = '__all__'
-
 
     def to_representation(self, instance):
         # Customize the representation of the serialized data here
@@ -139,6 +136,7 @@ class ShipmentSerializer(ModelSerializer):
     shipment_date = DateTimeField(format='%Y-%m-%d %H:%M')
     pick_up = AddressSerializer(read_only=True)
     delivery_address = AddressSerializer(read_only=True)
+
     class Meta:
         model = Shipment
         fields = '__all__'
@@ -168,10 +166,10 @@ class PaymentMethodSerializer(ModelSerializer):
 
 class PaymentSerializer(ModelSerializer):
     method = PaymentMethodSerializer(read_only=True)
+
     class Meta:
         model = Payment
         fields = '__all__'
-
 
 
 class JobSerializer(ModelSerializer):
@@ -179,6 +177,7 @@ class JobSerializer(ModelSerializer):
     shipment = ShipmentSerializer(read_only=True)
     payment = PaymentSerializer(read_only=True)
     vehicle = VehicleSerializer(read_only=True)
+
     class Meta:
         model = Job
         fields = '__all__'
@@ -191,3 +190,17 @@ class JobSerializer(ModelSerializer):
         except AttributeError:
             pass
         return representation
+
+
+class JobDetailSerializer(JobSerializer):
+    winner = ShipperSerializer()
+
+    class Meta:
+        model = Job
+        fields = '__all__'
+
+
+class FeedbackSerializer(ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = '__all__'
