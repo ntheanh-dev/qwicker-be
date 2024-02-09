@@ -81,25 +81,23 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         else:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
-    @transaction.atomic()
     def create(self, request, *args, **kwargs):
         data = request.data
-        try:
-            basic_account_info = {key: data.getlist(key) if len(data.getlist(key)) > 1 else data[key] for key in data}
-            selected_fields = ['cmnd', 'vehicle', 'vehicle_number']
-            additional_info = {key: basic_account_info.pop(key) for key in selected_fields}
+        basic_account_info = {key: data.getlist(key) if len(data.getlist(key)) > 1 else data[key] for key in data}
+        selected_fields = ['cmnd', 'vehicle_id', 'vehicle_number']
+        additional_info = {key: basic_account_info.pop(key) for key in selected_fields}
+        with transaction.atomic():
+            try:
+                s = ShipperSerializer(data=basic_account_info)
+                s.is_valid(raise_exception=True)
+                s_instance = s.save()
 
-            s = ShipperSerializer(data=basic_account_info)
-            s.is_valid(raise_exception=True)
-            s_instance = s.save()
-
-            additional_info['user'] = s_instance.id
-            sm = ShipperMoreSerializer(data=additional_info)
-            sm.is_valid(raise_exception=True)
-            sm.save()
-            return Response(ShipperSerializer(s_instance).data, status=status.HTTP_201_CREATED)
-        except:
-            return Response({'invalid fields were sent'}, status=status.HTTP_400_BAD_REQUEST)
+                additional_info['user_id'] = s_instance.id
+                ShipperMore.objects.create(**additional_info)
+                return Response(ShipperSerializer(s_instance).data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print(e)
+                return Response({'invalid fields were sent'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShipperMoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
@@ -186,10 +184,6 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         if job_status:
             status_list = [s for s in job_status.split(',')]
             query = query.filter(status__in=status_list)
-
-            if Job.Status.DONE in status_list or Job.Status.WAITING_PAY in status_list:
-                query = query.select_related('winner')
-                self.serializer_class = JobDetailSerializer
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
@@ -222,12 +216,14 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
     @action(methods=['get'], detail=True, url_path='list-shipper')
     def list_shipper(self, request, pk):
         user = request.user
-        job = Job.objects.filter(poster_id=user.id, id=pk).prefetch_related('auction_job')
-        if job:
-            shipper = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
-            return Response(ShipperSerializer(shipper, many=True).data, status=status.HTTP_200_OK)
-        else:
-            return Response([], status=status.HTTP_404_NOT_FOUND)
+        job = Job.objects.prefetch_related('auction_job').get(pk=pk)
+        try:
+            shippers = [auction.shipper for auction in job.auction_job.select_related('shipper').prefetch_related(Prefetch('shipper',queryset=Shipper.objects.prefetch_related('feedback_shipper'))).all()]
+            feedback_query = [s.feedback_shipper.all() for s in shippers]
+            return Response(ShipperWithFeedbackSerializer(shippers, many=True,context={'feedback': feedback_query[0]}).data, status=status.HTTP_200_OK)
+
+        except Job.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=True, url_path='feedback')
     def feedback(self, request, pk=None):
