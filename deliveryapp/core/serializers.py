@@ -172,6 +172,27 @@ class PaymentSerializer(ModelSerializer):
         fields = '__all__'
 
 
+class ShipperWithFeedbackSerializer(ShipperSerializer):
+    feedbacks = SerializerMethodField()
+
+    def get_feedbacks(self, shipper):
+        fb_query = self.context.get('feedback')
+        if fb_query:
+            fb = FeedbackSerializer(fb_query,many=True)
+            return fb.data
+        else:
+            fb = Feedback.objects.filter(shipper_id=shipper.id)
+            return FeedbackSerializer(fb,many=True).data
+
+    class Meta:
+        model = Shipper
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role', 'feedbacks']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'role': {'read_only': True},
+        }
+
+
 class JobSerializer(ModelSerializer):
     product = ProductSerializer(read_only=True)
     shipment = ShipmentSerializer(read_only=True)
