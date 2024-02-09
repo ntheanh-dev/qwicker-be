@@ -129,6 +129,10 @@ class Feedback(models.Model):
     shipper = models.ForeignKey(Shipper, related_name='feedback_shipper', on_delete=models.CASCADE)
     job = models.ForeignKey(Job, related_name='feedback_job', on_delete=models.CASCADE)
     rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    comment = models.CharField(max_length=255,blank=True)
+
+    class Meta:
+        unique_together = ('user', 'job')
 
 
 class Shipment(models.Model):

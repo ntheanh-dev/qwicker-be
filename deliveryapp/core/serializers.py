@@ -174,7 +174,7 @@ class PaymentSerializer(ModelSerializer):
 
 class ShipperWithFeedbackSerializer(ShipperSerializer):
     feedbacks = SerializerMethodField()
-
+    rating = SerializerMethodField()
     def get_feedbacks(self, shipper):
         fb_query = self.context.get('feedback')
         if fb_query:
@@ -184,13 +184,15 @@ class ShipperWithFeedbackSerializer(ShipperSerializer):
             fb = Feedback.objects.filter(shipper_id=shipper.id)
             return FeedbackSerializer(fb,many=True).data
 
+    def get_rating(self, shipper):
+        fb = self.get_feedbacks(shipper)
+        s = [s['rating'] for s in fb]
+        avg = sum(s)/len(fb)
+        return round(avg,2)
+
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role', 'feedbacks']
-        extra_kwargs = {
-            'password': {'write_only': True},
-            'role': {'read_only': True},
-        }
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role','rating','feedbacks']
 
 
 class JobSerializer(ModelSerializer):
@@ -214,7 +216,7 @@ class JobSerializer(ModelSerializer):
 
 
 class JobDetailSerializer(JobSerializer):
-    winner = ShipperSerializer()
+    winner = ShipperWithFeedbackSerializer()
 
     class Meta:
         model = Job

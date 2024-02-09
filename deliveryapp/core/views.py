@@ -130,6 +130,7 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
     pagination_class = JobPaginator
     permission_classes = [BasicUserOwnerJob]
 
+
     def create(self, request, *args, **kwargs):
         cleaned_data = {}
         for key, value in request.POST.items():
@@ -191,7 +192,7 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
 
     def retrieve(self, request, *args, **kwargs):
         query = self.get_queryset().filter(id=int(kwargs['pk']), poster=request.user.id).first()
-        return Response(self.serializer_class(query).data, status=status.HTTP_200_OK)
+        return Response(JobDetailSerializer(query).data, status=status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='assign')
     def assign(self, request, pk=None):
