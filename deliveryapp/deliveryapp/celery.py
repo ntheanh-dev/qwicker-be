@@ -4,6 +4,8 @@ from celery import Celery
 
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 # from django.template.loader import render_to_string
 # from django.utils.html import strip_tags
@@ -22,43 +24,44 @@ app.autodiscover_tasks()
 
 @app.task(ignore_result=True)
 def send_otp(receiver, otp, first_name):
-    # template_name = "core/verify_email.html"
-    # html_message = render_to_string(template_name, {'otp': otp, 'first_name': first_name})
-    # text_content = strip_tags(html_message)
+    template_name = "email/send_otp_email.html"
+    html_message = render_to_string(template_name, {'first_name': first_name,'otp': otp})
 
-    # message = EmailMultiAlternatives(
-    #     subject="Qwicker",
-    #     body=text_content,
-    #     from_email=settings.EMAIL_HOST_USER,
-    #     to=[receiver]
-    # )
-    # message.send()
-    send_mail(
-        subject='Add an eye-catching subject',
-        message='Write an amazing message',
+    message = EmailMultiAlternatives(
+        subject="Mã OTP Xác Thực Cho Tài Khoản Của Bạn",
         from_email=settings.EMAIL_HOST_USER,
-        recipient_list=[receiver]
+        to=[receiver]
     )
+    message.attach_alternative(html_message, "text/html")
+    message.send()
     return None
 
 
 @app.task(ignore_result=True)
-def send_apologia(receiver):
-    # template_name = "core/verify_email.html"
-    # html_message = render_to_string(template_name, {'otp': otp, 'first_name': first_name})
-    # text_content = strip_tags(html_message)
+def send_apologia(receivers,uuid):
+    template_name = "email/apologia_email.html"
+    html_message = render_to_string(template_name,{'uuid': uuid})
 
-    # message = EmailMultiAlternatives(
-    #     subject="Qwicker",
-    #     body=text_content,
-    #     from_email=settings.EMAIL_HOST_USER,
-    #     to=[receiver]
-    # )
-    # message.send()
-    send_mail(
-        subject='Bạn không được chấp nhận tham gia đơn hàng',
-        message='Xin lỗi',
+    message = EmailMultiAlternatives(
+        subject="Thông Báo Từ Chối Cho Đơn Hàng Vận Chuyển",
         from_email=settings.EMAIL_HOST_USER,
-        recipient_list=[receiver]
+        to=receivers
     )
+    message.attach_alternative(html_message,"text/html")
+    message.send()
+    return None
+
+
+@app.task(ignore_result=True)
+def send_congratulation(receiver,first_name):
+    template_name = "email/congratulation_email.html"
+    html_message = render_to_string(template_name, {'first_name': first_name})
+
+    message = EmailMultiAlternatives(
+        subject="Thông Báo Chọn Làm Shipper Cho Đơn Hàng",
+        from_email=settings.EMAIL_HOST_USER,
+        to=[receiver]
+    )
+    message.attach_alternative(html_message,"text/html")
+    message.send()
     return None

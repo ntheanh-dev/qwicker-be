@@ -15,7 +15,7 @@ from datetime import datetime
 from django.utils import timezone
 import random
 from .ultils import *
-from deliveryapp.celery import send_otp, send_apologia
+from deliveryapp.celery import send_otp, send_apologia,send_congratulation
 
 
 # Create your views here.
@@ -126,7 +126,7 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
     queryset = Job.objects.select_related('shipment', 'shipment__pick_up', 'shipment__delivery_address', 'product',
                                           'product__category', 'payment',
                                           'payment__method',
-                                          'vehicle').order_by('created_at')
+                                          'vehicle').order_by('-created_at')
     serializer_class = JobSerializer
     pagination_class = JobPaginator
     permission_classes = [BasicUserOwnerJob]
@@ -199,14 +199,17 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
     def assign(self, request, pk=None):
         shipper_id = request.data.get('shipper')
         if shipper_id:
+            selected_shipper = Shipper.objects.get(pk=int(shipper_id))
             job = Job.objects.filter(id=pk).prefetch_related('auction_job')
             shippers = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
+            rejected_shipper_emails = [s.email for s in shippers if s.id != int(shipper_id)]
+            print(rejected_shipper_emails)
             try:
-                for shipper in shippers:
-                    send_apologia.delay(shipper.email)
+                send_apologia.delay(rejected_shipper_emails,str(job[0].uuid.int)[:12])
+                send_congratulation.delay(selected_shipper.email, selected_shipper.first_name)
             except Exception as e:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            setattr(job[0], 'winner_id', int(shipper_id))
+
             j = Job.objects.get(pk=pk)
             j.status = Job.Status.WAITING_SHIPPER
             j.winner_id = shipper_id
