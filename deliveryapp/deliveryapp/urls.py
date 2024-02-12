@@ -17,6 +17,9 @@ schema_view = get_schema_view(
     permission_classes=(permissions.AllowAny,),
 )
 
+admin.site.site_header = "Qwicker"
+admin.site.index_title = ""
+
 urlpatterns = [
     path('', include('core.urls')),
     path('admin/', admin.site.urls),

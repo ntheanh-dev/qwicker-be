@@ -35,10 +35,11 @@ class BasicUserSerializer(ModelSerializer):
 class ShipperSerializer(ModelSerializer):
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role','verified']
         extra_kwargs = {
             'password': {'write_only': True},
             'role': {'read_only': True},
+            'verified': {'write_only': True}
         }
 
     def to_representation(self, instance):

@@ -88,6 +88,7 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         additional_info = {key: basic_account_info.pop(key) for key in selected_fields}
         with transaction.atomic():
             try:
+                basic_account_info['verified'] = False
                 s = ShipperSerializer(data=basic_account_info)
                 s.is_valid(raise_exception=True)
                 s_instance = s.save()
