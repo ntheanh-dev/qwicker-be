@@ -25,7 +25,7 @@ class User(AbstractUser):
     updated_date = models.DateTimeField(auto_now=True, null=True)
     verified = models.BooleanField(default=True)
 
-    role = models.CharField(max_length=50, choices=Roles.choices, default=Roles.ADMIN)
+    role = models.CharField(max_length=50, choices=Roles.choices, default=Roles.BASIC_USER)
     avatar = CloudinaryField('avatar')
 
     def __str__(self):

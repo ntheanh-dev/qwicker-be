@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'ckeditor',
     'ckeditor_uploader',
     'oauth2_provider',
+    'social_django',
+    'drf_social_oauth2',
     'debug_toolbar',
 ]
 
@@ -67,6 +69,7 @@ REST_FRAMEWORK = {
     # 'PAGE_SIZE': 2,
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'drf_social_oauth2.authentication.SocialAuthentication',
     )
 }
 ROOT_URLCONF = 'deliveryapp.urls'
@@ -82,6 +85,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -101,15 +106,6 @@ DATABASES = {
         'HOST': ''  # mặc định localhost
     }
 }
-# CACHES = {
-#     "default": {
-#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-#         "LOCATION": "redis://127.0.0.1:6379/0",  # Adjust the URL based on your Redis configuration
-#         'OPTIONS': {
-#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-#         }
-#     }
-# }
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -183,3 +179,22 @@ cloudinary.config(
     api_secret="lZZWOntBPCDWEnECsmWIalOtl08",
     secure=True
 )
+AUTHENTICATION_BACKENDS = (
+    # Others auth providers (e.g. Facebook, OpenId, etc)
+    # Google  OAuth2
+    'social_core.backends.google.GoogleOAuth2',
+    # drf-social-oauth2
+    'drf_social_oauth2.backends.DjangoOAuth2',
+    # Django
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+# Google configuration
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "297909054584-ec2ra6tq46trk2gvj9ubqsf1rq20q335.apps.googleusercontent.com"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "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"
+
+# Define SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE to get extra permissions from Google.
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]

@@ -23,7 +23,9 @@ admin.site.index_title = ""
 urlpatterns = [
     path('', include('core.urls')),
     path('admin/', admin.site.urls),
-    path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+    # path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+    re_path(r'^auth/', include('drf_social_oauth2.urls', namespace='drf')),
+
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',
             schema_view.without_ui(cache_timeout=0),
             name='schema-json'),
