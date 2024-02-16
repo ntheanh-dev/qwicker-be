@@ -4,7 +4,7 @@ from django.db.models import Prefetch, Q, FilteredRelation
 from django.http import HttpResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
-from .paginator import JobPaginator
+from .paginator import *
 from .perms import *
 from .serializers import *
 from rest_framework.decorators import action, permission_classes
@@ -173,9 +173,7 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
                 job['shipment_id'] = shipment.id
                 #
                 job_instance = Job.objects.create(**job)
-                job_seria = JobSerializer(data=job_instance, context={'request': request})
-                job_seria.is_valid()
-                return Response(job_seria.data, status=status.HTTP_201_CREATED)
+                return Response(JobSerializer(job_instance, context={'request': request}).data, status=status.HTTP_201_CREATED)
         except Exception as e:
             print(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
@@ -225,8 +223,10 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         try:
             shippers = [auction.shipper for auction in job.auction_job.select_related('shipper').prefetch_related(Prefetch('shipper',queryset=Shipper.objects.prefetch_related('feedback_shipper'))).all()]
             feedback_query = [s.feedback_shipper.all() for s in shippers]
-            return Response(ShipperWithFeedbackSerializer(shippers, many=True,context={'feedback': feedback_query[0]}).data, status=status.HTTP_200_OK)
-
+            if feedback_query:
+                return Response(ShipperWithRatingSerializer(shippers, many=True,context={'feedback': feedback_query[0]}).data, status=status.HTTP_200_OK)
+            else:
+                return Response(ShipperWithRatingSerializer(shippers, many=True).data, status=status.HTTP_200_OK)
         except Job.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -237,13 +237,12 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         if job.poster.id == user.id:
             try:
                 feedback_data = request.data.dict()
-                feedback_data['job'] = job.id
-                feedback_data['user'] = request.user.id
-                fb = FeedbackSerializer(data=feedback_data)
-                fb.is_valid(raise_exception=True)
-                fb.save()
-                return Response(fb.data, status=status.HTTP_201_CREATED)
+                feedback_data['job_id'] = job.id
+                feedback_data['user_id'] = request.user.id
+                feedback = Feedback.objects.create(**feedback_data)
+                return Response(FeedbackSerializer(feedback).data, status=status.HTTP_201_CREATED)
             except Exception as e:
+                print(e)
                 return Response(status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(status=status.HTTP_403_FORBIDDEN)
@@ -367,3 +366,19 @@ class AuctionViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
                                 status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(data={'error_msg': "Job and shipper are required!!!"}, status=status.HTTP_400_BAD_REQUEST)
+
+class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Feedback.objects.select_related('user','job').order_by('-created_at')
+    serializer_class = FeedbackSerializer
+    pagination_class = FeedbackPaginator
+
+    def list(self, request, *args, **kwargs):
+        shipper_id = request.query_params.get('shipper')
+        query = self.get_queryset()
+        if shipper_id:
+            query = query.filter(shipper_id=shipper_id)
+
+        query_paginate = self.paginate_queryset(query)
+        feedback = self.serializer_class(query_paginate, many=True)
+        return Response(self.get_paginated_response(feedback.data),status=status.HTTP_200_OK)
+

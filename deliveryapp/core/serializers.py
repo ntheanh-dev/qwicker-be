@@ -35,7 +35,7 @@ class BasicUserSerializer(ModelSerializer):
 class ShipperSerializer(ModelSerializer):
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role','verified']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role', 'verified']
         extra_kwargs = {
             'password': {'write_only': True},
             'role': {'read_only': True},
@@ -173,27 +173,28 @@ class PaymentSerializer(ModelSerializer):
         fields = '__all__'
 
 
-class ShipperWithFeedbackSerializer(ShipperSerializer):
-    feedbacks = SerializerMethodField()
+class ShipperWithRatingSerializer(ShipperSerializer):
     rating = SerializerMethodField()
-    def get_feedbacks(self, shipper):
-        fb_query = self.context.get('feedback')
-        if fb_query:
-            fb = FeedbackSerializer(fb_query,many=True)
-            return fb.data
-        else:
-            fb = Feedback.objects.filter(shipper_id=shipper.id)
-            return FeedbackSerializer(fb,many=True).data
 
     def get_rating(self, shipper):
-        fb = self.get_feedbacks(shipper)
-        s = [s['rating'] for s in fb]
-        avg = sum(s)/len(fb)
-        return round(avg,2)
+        fb_query = self.context.get('feedback')
+        if fb_query:
+            fb = FeedbackSerializer(fb_query, many=True)
+            data = fb.data
+        else:
+            fb = Feedback.objects.filter(shipper_id=shipper.id)
+            data = FeedbackSerializer(fb, many=True).data
+
+        if len(data) > 0:
+            s = [s['rating'] for s in data]
+            avg = sum(s) / len(data)
+            return round(avg, 2)
+        else:
+            return 0
 
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role','rating','feedbacks']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role', 'rating']
 
 
 class JobSerializer(ModelSerializer):
@@ -217,14 +218,34 @@ class JobSerializer(ModelSerializer):
 
 
 class JobDetailSerializer(JobSerializer):
-    winner = ShipperWithFeedbackSerializer()
+    winner = ShipperSerializer()
 
     class Meta:
         model = Job
         fields = '__all__'
 
 
+class JobWithProductSerializer(ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = Job
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        try:
+            representation['uuid'] = str(instance.uuid.int)[:12]
+        except AttributeError:
+            pass
+        return representation
+
+
 class FeedbackSerializer(ModelSerializer):
+    user = BasicUserSerializer(read_only=True)
+    job = JobWithProductSerializer(read_only=True)
+
     class Meta:
         model = Feedback
         fields = '__all__'
