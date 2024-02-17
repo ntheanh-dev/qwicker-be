@@ -173,6 +173,9 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
                 job['shipment_id'] = shipment.id
                 #
                 job_instance = Job.objects.create(**job)
+                # delete data in redis db
+                for key in cache.keys("job*"):
+                    cache.delete(key)
                 return Response(JobSerializer(job_instance, context={'request': request}).data, status=status.HTTP_201_CREATED)
         except Exception as e:
             print(e)
@@ -201,7 +204,6 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             job = Job.objects.filter(id=pk).prefetch_related('auction_job')
             shippers = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
             rejected_shipper_emails = [s.email for s in shippers if s.id != int(shipper_id)]
-            print(rejected_shipper_emails)
             try:
                 send_apologia.delay(rejected_shipper_emails,str(job[0].uuid.int)[:12])
                 send_congratulation.delay(selected_shipper.email, selected_shipper.first_name)
@@ -259,12 +261,23 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
 
     @action(methods=['get'], detail=False, url_path='find')
     def find(self, request):
-        query = self.get_queryset().filter(
-            ~Q(auction_job__shipper_id=request.user.id) & Q(status=Job.Status.FINDING_SHIPPER))
-        query = self.paginate_queryset(query)
-        jobs = self.serializer_class(data=query, many=True)
-        jobs.is_valid()
-        return Response(self.get_paginated_response(jobs.data), status=status.HTTP_200_OK)
+        if len(request.query_params) == 1 and 'page' in request.query_params:
+            page = int(request.query_params.get('page'))
+            redis_key = f'job:page:{page}'
+            redis_data = cache.get(redis_key)
+            redis_expire_time = 60 * 5
+            if redis_data:
+                return Response(redis_data, status=status.HTTP_200_OK)
+            else:
+                query = self.get_queryset().filter(
+                    ~Q(auction_job__shipper_id=request.user.id) & Q(status=Job.Status.FINDING_SHIPPER))
+                query = self.paginate_queryset(query)
+                jobs = self.serializer_class(query, many=True)
+                data = self.get_paginated_response(jobs.data)
+                cache.set(redis_key,data,redis_expire_time)
+                return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, *args, **kwargs):
         try:
