@@ -184,9 +184,13 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
     def list(self, request, *args, **kwargs):
         query = self.get_queryset().filter(poster=request.user.id)
         job_status = request.query_params.get('status')
+        kw = request.query_params.get('kw')
         if job_status:
             status_list = [s for s in job_status.split(',')]
             query = query.filter(status__in=status_list)
+        if kw:
+            query = query.filter(Q(shipment__pick_up__city__icontains=kw) | Q(shipment__pick_up__district__icontains=kw)
+                                 | Q(shipment__pick_up__street__icontains=kw) | Q(shipment__pick_up__home_number__icontains=kw))
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
