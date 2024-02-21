@@ -39,7 +39,6 @@ class ShipperSerializer(ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True},
             'role': {'read_only': True},
-            'verified': {'write_only': True}
         }
 
     def to_representation(self, instance):
@@ -194,7 +193,7 @@ class ShipperWithRatingSerializer(ShipperSerializer):
 
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar', 'username', 'password', 'email', 'role', 'rating']
+        fields = ['id', 'first_name', 'last_name', 'avatar',  'email', 'rating']
 
 
 class JobSerializer(ModelSerializer):

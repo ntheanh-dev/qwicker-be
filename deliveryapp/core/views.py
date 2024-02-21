@@ -77,7 +77,7 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
                 for k, v in request.data.items():
                     setattr(u, k, v)
                 u.save()
-            return Response(BasicUserSerializer(u, context={'request': request}).data, status=status.HTTP_200_OK)
+            return Response(ShipperWithRatingSerializer(u, context={'request': request}).data, status=status.HTTP_200_OK)
         else:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
