@@ -1,4 +1,6 @@
 import json
+
+import vnpay
 from django.db import transaction, IntegrityError
 from django.db.models import Prefetch, Q, FilteredRelation
 from django.http import HttpResponse
@@ -8,14 +10,14 @@ from .paginator import *
 from .perms import *
 from .serializers import *
 from rest_framework.decorators import action, permission_classes
-from rest_framework.views import Response
+from rest_framework.views import Response, APIView
 from django.core.cache import cache
 import cloudinary.uploader
 from datetime import datetime
 from django.utils import timezone
 import random
 from .ultils import *
-from deliveryapp.celery import send_otp, send_apologia,send_congratulation
+from deliveryapp.celery import send_otp, send_apologia, send_congratulation
 
 
 # Create your views here.
@@ -77,7 +79,8 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
                 for k, v in request.data.items():
                     setattr(u, k, v)
                 u.save()
-            return Response(ShipperWithRatingSerializer(u, context={'request': request}).data, status=status.HTTP_200_OK)
+            return Response(ShipperWithRatingSerializer(u, context={'request': request}).data,
+                            status=status.HTTP_200_OK)
         else:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -131,7 +134,6 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
     pagination_class = JobPaginator
     permission_classes = [BasicUserOwnerJob]
 
-
     def create(self, request, *args, **kwargs):
         cleaned_data = {}
         for key, value in request.POST.items():
@@ -176,7 +178,8 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
                 # delete data in redis db
                 for key in cache.keys("job*"):
                     cache.delete(key)
-                return Response(JobSerializer(job_instance, context={'request': request}).data, status=status.HTTP_201_CREATED)
+                return Response(JobSerializer(job_instance, context={'request': request}).data,
+                                status=status.HTTP_201_CREATED)
         except Exception as e:
             print(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
@@ -190,7 +193,8 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             query = query.filter(status__in=status_list)
         if kw:
             query = query.filter(Q(shipment__pick_up__city__icontains=kw) | Q(shipment__pick_up__district__icontains=kw)
-                                 | Q(shipment__pick_up__street__icontains=kw) | Q(shipment__pick_up__home_number__icontains=kw))
+                                 | Q(shipment__pick_up__street__icontains=kw) | Q(
+                shipment__pick_up__home_number__icontains=kw))
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
@@ -209,7 +213,7 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
             shippers = [auction.shipper for auction in job[0].auction_job.select_related('shipper').all()]
             rejected_shipper_emails = [s.email for s in shippers if s.id != int(shipper_id)]
             try:
-                send_apologia.delay(rejected_shipper_emails,str(job[0].uuid.int)[:12])
+                send_apologia.delay(rejected_shipper_emails, str(job[0].uuid.int)[:12])
                 send_congratulation.delay(selected_shipper.email, selected_shipper.first_name)
             except Exception as e:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -227,10 +231,13 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         user = request.user
         job = Job.objects.prefetch_related('auction_job').get(pk=pk)
         try:
-            shippers = [auction.shipper for auction in job.auction_job.select_related('shipper').prefetch_related(Prefetch('shipper',queryset=Shipper.objects.prefetch_related('feedback_shipper'))).all()]
+            shippers = [auction.shipper for auction in job.auction_job.select_related('shipper').prefetch_related(
+                Prefetch('shipper', queryset=Shipper.objects.prefetch_related('feedback_shipper'))).all()]
             feedback_query = [s.feedback_shipper.all() for s in shippers]
             if feedback_query:
-                return Response(ShipperWithRatingSerializer(shippers, many=True,context={'feedback': feedback_query[0]}).data, status=status.HTTP_200_OK)
+                return Response(
+                    ShipperWithRatingSerializer(shippers, many=True, context={'feedback': feedback_query[0]}).data,
+                    status=status.HTTP_200_OK)
             else:
                 return Response(ShipperWithRatingSerializer(shippers, many=True).data, status=status.HTTP_200_OK)
         except Job.DoesNotExist:
@@ -278,7 +285,7 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
                 query = self.paginate_queryset(query)
                 jobs = self.serializer_class(query, many=True)
                 data = self.get_paginated_response(jobs.data)
-                cache.set(redis_key,data,redis_expire_time)
+                cache.set(redis_key, data, redis_expire_time)
                 return Response(data, status=status.HTTP_200_OK)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -286,7 +293,7 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
         try:
             query = Job.objects.get(pk=int(kwargs['pk']))
-            data = self.serializer_class(query).data
+            data = JobDetailSerializer(query).data
             shipper_count = Auction.objects.filter(job__id=int(kwargs['pk'])).count()
             data['shipper_count'] = shipper_count
             return Response(data, status=status.HTTP_200_OK)
@@ -315,7 +322,8 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             query = query.filter(status__in=status_list)
         if kw:
             query = query.filter(Q(shipment__pick_up__city__icontains=kw) | Q(shipment__pick_up__district__icontains=kw)
-                                 | Q(shipment__pick_up__street__icontains=kw) | Q(shipment__pick_up__home_number__icontains=kw))
+                                 | Q(shipment__pick_up__street__icontains=kw) | Q(
+                shipment__pick_up__home_number__icontains=kw))
         query = self.paginate_queryset(query)
         jobs = self.serializer_class(data=query, many=True)
         jobs.is_valid()
@@ -356,9 +364,25 @@ class AddressViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
     serializer_class = AddressSerializer
 
 
-class PaymentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class PaymentViewSet(viewsets.ViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
+    permission_classes = [IsBasicUser]
+
+    @action(methods=['post'], detail=True, url_path='checkout')
+    def checkout(self, request, pk=None):
+        try:
+            job = Job.objects.filter(id=int(request.data.get('order_id'))).select_related('shipment').first()
+            payment = Payment.objects.get(pk=pk)
+            job.status = Job.Status.WAITING_SHIPPER
+            job.save(update_fields=['status'])
+
+            payment.amount = job.shipment.cost
+            payment.payment_date = timezone.now()
+            payment.save(update_fields=['amount', 'payment_date'])
+            return Response({}, status=status.HTTP_200_OK)
+        except Payment.DoesNotExist or Job.DoesNotExist:
+            return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PaymentMethodViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
@@ -388,8 +412,9 @@ class AuctionViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
         else:
             return Response(data={'error_msg': "Job and shipper are required!!!"}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Feedback.objects.select_related('user','job').order_by('-created_at')
+    queryset = Feedback.objects.select_related('user', 'job').order_by('-created_at')
     serializer_class = FeedbackSerializer
     pagination_class = FeedbackPaginator
 
@@ -401,5 +426,4 @@ class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView):
 
         query_paginate = self.paginate_queryset(query)
         feedback = self.serializer_class(query_paginate, many=True)
-        return Response(self.get_paginated_response(feedback.data),status=status.HTTP_200_OK)
-
+        return Response(self.get_paginated_response(feedback.data), status=status.HTTP_200_OK)

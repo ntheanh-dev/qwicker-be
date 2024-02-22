@@ -29,7 +29,7 @@ AUTH_USER_MODEL = 'core.User'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'social_django',
     'drf_social_oauth2',
     'debug_toolbar',
+    'vnpay',
 ]
 
 MIDDLEWARE = [
@@ -198,3 +199,9 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
 ]
+
+# Vnpay configuration
+VNPAY_TMN_CODE = 'Q2L9DE6D'
+VNPAY_HASH_SECRET_KEY = 'IDKCETNVMRJOMDYZCCEEFMSJJLTRQRKX'
+VNPAY_PAYMENT_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'
+VNPAY_RETURN_URL = 'http://192.168.1.207:8000/vnpay/payment_return/'

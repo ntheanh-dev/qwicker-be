@@ -217,7 +217,7 @@ class JobSerializer(ModelSerializer):
 
 
 class JobDetailSerializer(JobSerializer):
-    winner = ShipperSerializer()
+    winner = ShipperWithRatingSerializer()
 
     class Meta:
         model = Job

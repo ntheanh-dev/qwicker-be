@@ -21,7 +21,7 @@
 
 LOCK TABLES `core_paymentmethod` WRITE;
 /*!40000 ALTER TABLE `core_paymentmethod` DISABLE KEYS */;
-INSERT INTO `core_paymentmethod` VALUES (1,'Momo'),(2,'Tiền mặt');
+INSERT INTO `core_paymentmethod` VALUES (1,'VnPay'),(2,'Tiền mặt');
 /*!40000 ALTER TABLE `core_paymentmethod` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
