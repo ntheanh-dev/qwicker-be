@@ -167,12 +167,16 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
                 # Payment
                 cleaned_data['payment']['is_poster_pay'] = bool(cleaned_data['payment']['is_poster_pay'].lower())
                 payment = Payment.objects.create(**cleaned_data['payment'])
+                payment_method_id = int(cleaned_data['payment']['method_id'])
+                cash_payment_method_id = PaymentMethod.objects.filter(name__icontains='Tiền mặt').first().id
                 # Job
                 job = cleaned_data['order']
                 job['poster_id'] = request.user.id
                 job['product_id'] = product.id
                 job['payment_id'] = payment.id
                 job['shipment_id'] = shipment.id
+                if payment_method_id != cash_payment_method_id:
+                    job['status'] = Job.Status.WAITING_PAY
                 #
                 job_instance = Job.objects.create(**job)
                 # delete data in redis db
@@ -331,23 +335,16 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
 
     @action(methods=['post'], detail=True, url_path='complete')
     def complete(self, request, pk=None):
-        job = Job.objects.filter(id=pk).select_related('payment', 'payment__method').first()
+        job = Job.objects.filter(id=pk).select_related('payment', 'payment__method','shipment').first()
         if job.status == Job.Status.WAITING_SHIPPER:
-            if job.payment.method.name in ['Momo']:
-                if job.payment.payment_date is None:
-                    job.status = Job.Status.WAITING_PAY
-                    job.save(update_fields=['status'])
-                # is paid
-                else:
-                    job.status = Job.Status.DONE
-                    job.save(update_fields=['status'])
-            # cash
-            else:
-                job.payment.payment_date = timezone.now()
-                job.payment.save(update_fields=['payment_date'])
+            payment = job.payment
+            if payment.payment_date is None:
+                payment.payment_date = timezone.now()
+                payment.amount = job.shipment.cost
+                payment.save(update_fields=['payment_date','amount'])
 
-                job.status = Job.Status.DONE
-                job.save(update_fields=['status'])
+            job.status = Job.Status.DONE
+            job.save(update_fields=['status'])
 
             return Response({"complete!!!"}, status=status.HTTP_200_OK)
         else:
@@ -374,7 +371,7 @@ class PaymentViewSet(viewsets.ViewSet):
         try:
             job = Job.objects.filter(id=int(request.data.get('order_id'))).select_related('shipment').first()
             payment = Payment.objects.get(pk=pk)
-            job.status = Job.Status.WAITING_SHIPPER
+            job.status = Job.Status.FINDING_SHIPPER
             job.save(update_fields=['status'])
 
             payment.amount = job.shipment.cost
