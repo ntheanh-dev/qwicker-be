@@ -175,10 +175,11 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
                 job['product_id'] = product.id
                 job['payment_id'] = payment.id
                 job['shipment_id'] = shipment.id
-                if payment_method_id != cash_payment_method_id:
-                    job['status'] = Job.Status.WAITING_PAY
                 #
                 job_instance = Job.objects.create(**job)
+                if payment_method_id != cash_payment_method_id:
+                    job_instance.status = Job.Status.WAITING_PAY
+                    job_instance.save(update_fields=['status'])
                 # delete data in redis db
                 for key in cache.keys("job*"):
                     cache.delete(key)
@@ -414,6 +415,7 @@ class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Feedback.objects.select_related('user', 'job').order_by('-created_at')
     serializer_class = FeedbackSerializer
     pagination_class = FeedbackPaginator
+    permission_classes = [IsBasicUser]
 
     def list(self, request, *args, **kwargs):
         shipper_id = request.query_params.get('shipper')
@@ -424,3 +426,15 @@ class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView):
         query_paginate = self.paginate_queryset(query)
         feedback = self.serializer_class(query_paginate, many=True)
         return Response(self.get_paginated_response(feedback.data), status=status.HTTP_200_OK)
+
+    @action(methods=['get'], detail=False, url_path='my-feedback')
+    def my_feedback(self, request):
+        orderId = request.query_params.get('orderId')
+        if orderId:
+            feedback = Feedback.objects.filter(job_id=int(orderId)).first()
+            if feedback:
+                return Response(self.serializer_class(feedback).data,status=status.HTTP_200_OK)
+            else:
+                return Response({},status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
