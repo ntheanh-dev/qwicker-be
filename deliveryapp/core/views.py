@@ -66,6 +66,21 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
         else:
             return Response({'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['post'], detail=False, url_path='change-password')
+    def change_password(self, request):
+        user = request.user
+        if user.is_authenticated:
+            old_password = request.data['old_password']
+            new_password = request.data['new_password']
+            if user.check_password(old_password):
+                user.set_password(new_password)
+                user.save()
+                return Response({"response_code"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({'old_password is incorrect'}, status=status.HTTP_304_NOT_MODIFIED)
+        else:
+            return Response({'unauthorized'},status=status.HTTP_401_UNAUTHORIZED)
+
 
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Shipper.objects.all()
