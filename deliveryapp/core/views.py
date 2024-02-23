@@ -19,8 +19,7 @@ from datetime import datetime
 from django.utils import timezone
 import random
 from .ultils import *
-from deliveryapp.celery import send_otp, send_apologia, send_congratulation, send_new_password, \
-    send_otp_to_reset_password
+from deliveryapp.celery import send_otp, send_apologia, send_congratulation, send_otp_to_reset_password
 
 
 # Create your views here.
@@ -53,22 +52,6 @@ class BasicUserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         else:
             return Response({'Email and first_name are required '}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], detail=False, url_path='verify-email')
-    def verify_email(self, request):
-        if request.data.get('email') and request.data.get('otp'):
-            email = request.data.get('email')
-            opt = request.data.get('otp')
-            cache_opt = cache.get(email)
-            if cache_opt:
-                if cache_opt == opt:
-                    return Response({'Email is valid'}, status=status.HTTP_200_OK)
-                else:
-                    return Response({'incorrect otp'}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response({'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class AccountViewSet(viewsets.ViewSet):
     queryset = User.objects.all()
@@ -82,7 +65,7 @@ class AccountViewSet(viewsets.ViewSet):
             if user.check_password(old_password):
                 user.set_password(new_password)
                 user.save()
-                return Response({"response_code"}, status=status.HTTP_204_NO_CONTENT)
+                return Response({"change password success"}, status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({'old_password is incorrect'}, status=status.HTTP_304_NOT_MODIFIED)
         else:
@@ -100,30 +83,35 @@ class AccountViewSet(viewsets.ViewSet):
         else:
             return Response({f'{email} is not found '}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], detail=False, url_path='reset-password')
-    def reset_password(self, request):
+    @action(methods=['post'], detail=False, url_path='verify-email')
+    def verify_email(self, request):
         if request.data.get('email') and request.data.get('otp'):
             email = request.data.get('email')
-            opt = request.data.get('otp')
-            cache_opt = cache.get(email)
-            if cache_opt:
-                if cache_opt == opt:
-                    account = User.objects.filter(email=email).first()
-                    password = ""
-                    for _ in range(3):
-                        password += secrets.choice(string.ascii_lowercase)
-                        password += secrets.choice(string.ascii_uppercase)
-                        password += secrets.choice(string.digits)
-                    account.set_password(password)
-                    account.save()
-                    send_new_password.delay(email, account.username, password)
-                    return Response(status=status.HTTP_204_NO_CONTENT)
+            otp = request.data.get('otp')
+            print(otp)
+            cache_otp = cache.get(email)
+            print(cache_otp)
+            if cache_otp:
+                if cache_otp == otp:
+                    return Response({'Email is valid'}, status=status.HTTP_200_OK)
                 else:
                     return Response({'incorrect otp'}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
         else:
             return Response({'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['post'], detail=False, url_path='reset-password')
+    def reset_password(self, request):
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
+        if email and new_password:
+            account = User.objects.filter(email=email).first()
+            account.set_password(new_password)
+            account.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'Email and new password are required'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
