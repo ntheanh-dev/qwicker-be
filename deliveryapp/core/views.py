@@ -19,11 +19,12 @@ from datetime import datetime
 from django.utils import timezone
 import random
 from .ultils import *
-from deliveryapp.celery import send_otp, send_apologia, send_congratulation,send_new_password
+from deliveryapp.celery import send_otp, send_apologia, send_congratulation, send_new_password, \
+    send_otp_to_reset_password
 
 
 # Create your views here.
-class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
+class BasicUserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = BasicUser.objects.all()
     serializer_class = BasicUserSerializer
     parser_classes = [parsers.MultiPartParser, ]
@@ -47,7 +48,7 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
             receiver = request.data.get('email')
             first_name = request.data.get('first_name')
             send_otp.delay(receiver, otp, first_name)
-            cache.set(receiver, str(otp), 60)
+            cache.set(receiver, str(otp), 60 * 3)
             return Response({}, status=status.HTTP_200_OK)
         else:
             return Response({'Email and first_name are required '}, status=status.HTTP_400_BAD_REQUEST)
@@ -68,6 +69,10 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
         else:
             return Response({'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class AccountViewSet(viewsets.ViewSet):
+    queryset = User.objects.all()
+
     @action(methods=['post'], detail=False, url_path='change-password')
     def change_password(self, request):
         user = request.user
@@ -81,27 +86,44 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
             else:
                 return Response({'old_password is incorrect'}, status=status.HTTP_304_NOT_MODIFIED)
         else:
-            return Response({'unauthorized'},status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    @action(methods=['post'], detail=False, url_path='sent-otp')
+    def sent_otp(self, request):
+        email = request.data.get('email')
+
+        if email and User.objects.filter(email=email).exists():
+            otp = random.randint(1000, 9999)
+            send_otp_to_reset_password.delay(email, otp)
+            cache.set(email, str(otp), 60 * 3)
+            return Response({}, status=status.HTTP_200_OK)
+        else:
+            return Response({f'{email} is not found '}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=False, url_path='reset-password')
     def reset_password(self, request):
-        username = request.data['username']
-        email = request.data['email']
-
-        account = User.objects.filter(username=username,email=email).first()
-        if account:
-            password = ""
-            for _ in range(3):
-                password += secrets.choice(string.ascii_lowercase)
-                password += secrets.choice(string.ascii_uppercase)
-                password += secrets.choice(string.digits)
-            account.set_password(password)
-            account.save()
-            send_new_password.delay(email, account.username,password )
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        if request.data.get('email') and request.data.get('otp'):
+            email = request.data.get('email')
+            opt = request.data.get('otp')
+            cache_opt = cache.get(email)
+            if cache_opt:
+                if cache_opt == opt:
+                    account = User.objects.filter(email=email).first()
+                    password = ""
+                    for _ in range(3):
+                        password += secrets.choice(string.ascii_lowercase)
+                        password += secrets.choice(string.ascii_uppercase)
+                        password += secrets.choice(string.digits)
+                    account.set_password(password)
+                    account.save()
+                    send_new_password.delay(email, account.username, password)
+                    return Response(status=status.HTTP_204_NO_CONTENT)
+                else:
+                    return Response({'incorrect otp'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({'otp time is expired'}, status=status.HTTP_204_NO_CONTENT)
         else:
-            return Response({'username and email not match'},status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
@@ -373,13 +395,13 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
 
     @action(methods=['post'], detail=True, url_path='complete')
     def complete(self, request, pk=None):
-        job = Job.objects.filter(id=pk).select_related('payment', 'payment__method','shipment').first()
+        job = Job.objects.filter(id=pk).select_related('payment', 'payment__method', 'shipment').first()
         if job.status == Job.Status.WAITING_SHIPPER:
             payment = job.payment
             if payment.payment_date is None:
                 payment.payment_date = timezone.now()
                 payment.amount = job.shipment.cost
-                payment.save(update_fields=['payment_date','amount'])
+                payment.save(update_fields=['payment_date', 'amount'])
 
             job.status = Job.Status.DONE
             job.save(update_fields=['status'])
@@ -470,8 +492,8 @@ class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView):
         if orderId:
             feedback = Feedback.objects.filter(job_id=int(orderId)).first()
             if feedback:
-                return Response(self.serializer_class(feedback).data,status=status.HTTP_200_OK)
+                return Response(self.serializer_class(feedback).data, status=status.HTTP_200_OK)
             else:
-                return Response({},status=status.HTTP_204_NO_CONTENT)
+                return Response({}, status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
