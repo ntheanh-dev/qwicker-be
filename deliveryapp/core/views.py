@@ -1,4 +1,6 @@
 import json
+import secrets
+import string
 
 import vnpay
 from django.db import transaction, IntegrityError
@@ -17,7 +19,7 @@ from datetime import datetime
 from django.utils import timezone
 import random
 from .ultils import *
-from deliveryapp.celery import send_otp, send_apologia, send_congratulation
+from deliveryapp.celery import send_otp, send_apologia, send_congratulation,send_new_password
 
 
 # Create your views here.
@@ -80,6 +82,26 @@ class BasicUserViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retrieve
                 return Response({'old_password is incorrect'}, status=status.HTTP_304_NOT_MODIFIED)
         else:
             return Response({'unauthorized'},status=status.HTTP_401_UNAUTHORIZED)
+
+    @action(methods=['post'], detail=False, url_path='reset-password')
+    def reset_password(self, request):
+        username = request.data['username']
+        email = request.data['email']
+
+        account = User.objects.filter(username=username,email=email).first()
+        if account:
+            password = ""
+            for _ in range(3):
+                password += secrets.choice(string.ascii_lowercase)
+                password += secrets.choice(string.ascii_uppercase)
+                password += secrets.choice(string.digits)
+            account.set_password(password)
+            account.save()
+            send_new_password.delay(email, account.username,password )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'username and email not match'},status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):

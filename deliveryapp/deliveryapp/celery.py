@@ -38,6 +38,21 @@ def send_otp(receiver, otp, first_name):
 
 
 @app.task(ignore_result=True)
+def send_new_password(receiver, username, password):
+    template_name = "email/send_reset_password_email.html"
+    html_message = render_to_string(template_name, {'username': username,'password': password})
+
+    message = EmailMultiAlternatives(
+        subject="Mật Khẩu Của Bạn Vừa Được Thay Đổi",
+        from_email=settings.EMAIL_HOST_USER,
+        to=[receiver]
+    )
+    message.attach_alternative(html_message, "text/html")
+    message.send()
+    return None
+
+
+@app.task(ignore_result=True)
 def send_apologia(receivers,uuid):
     template_name = "email/apologia_email.html"
     html_message = render_to_string(template_name,{'uuid': uuid})
