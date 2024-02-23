@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'drf_social_oauth2',
     'debug_toolbar',
     'vnpay',
+    'rangefilter',
 ]
 
 MIDDLEWARE = [
