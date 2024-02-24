@@ -1,3 +1,4 @@
+import cloudinary.uploader
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, DateTimeField
 from .models import *
 from django.utils import timezone
@@ -12,25 +13,6 @@ class BasicUserSerializer(ModelSerializer):
             'role': {'read_only': True},
         }
 
-    def to_representation(self, instance):
-        # Customize the representation of the serialized data here
-        representation = super().to_representation(instance)
-        try:
-            representation['avatar'] = instance.avatar.url
-        except AttributeError:
-            pass
-        return representation
-
-    def create(self, validated_data):
-        data = validated_data.copy()
-        u = User(**data)
-        u.role = User.Roles.BASIC_USER
-        u.set_password(u.password)
-
-        u.save()
-
-        return u
-
 
 class ShipperSerializer(ModelSerializer):
     class Meta:
@@ -40,27 +22,6 @@ class ShipperSerializer(ModelSerializer):
             'password': {'write_only': True},
             'role': {'read_only': True},
         }
-
-    def to_representation(self, instance):
-
-        # Customize the representation of the serialized data here
-        representation = super().to_representation(instance)
-        try:
-            representation['avatar'] = instance.avatar.url
-            representation['more'] = ShipperMoreSerializer(instance=instance.more).data
-        except AttributeError:
-            pass
-
-        return representation
-
-    def create(self, validated_data):
-        data = validated_data.copy()
-        u = User(**data)
-        u.role = User.Roles.SHIPPER
-        u.set_password(u.password)
-        u.save()
-
-        return u
 
 
 class VehicleSerializer(ModelSerializer):
@@ -84,15 +45,6 @@ class ShipperMoreSerializer(ModelSerializer):
     class Meta:
         model = ShipperMore
         fields = ['vehicle_number', 'cmnd', 'vehicle']
-
-    def to_representation(self, instance):
-        # Customize the representation of the serialized data here
-        representation = super().to_representation(instance)
-        try:
-            representation['cmnd'] = instance.cmnd.url
-        except AttributeError:
-            pass
-        return representation
 
 
 class ProductCategorySerializer(ModelSerializer):
@@ -193,7 +145,7 @@ class ShipperWithRatingSerializer(ShipperSerializer):
 
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar',  'email', 'rating']
+        fields = ['id', 'first_name', 'last_name', 'avatar',  'email', 'rating','verified']
 
 
 class JobSerializer(ModelSerializer):

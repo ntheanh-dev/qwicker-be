@@ -26,7 +26,7 @@ class User(AbstractUser):
     verified = models.BooleanField(default=True)
 
     role = models.CharField(max_length=50, choices=Roles.choices, default=Roles.BASIC_USER)
-    avatar = CloudinaryField('avatar')
+    avatar = models.CharField(max_length=255,blank=True, null=True)
 
     def __str__(self):
         return f'{self.get_full_name()} - {self.role}'
@@ -51,7 +51,7 @@ class ShipperManager(BaseUserManager):
 
 class ShipperMore(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    cmnd = CloudinaryField('cmnd', null=True, default=None, blank=True)
+    cmnd = models.CharField(max_length=255,blank=True, null=True)
     vehicle = models.ForeignKey("Vehicle", on_delete=models.CASCADE, null=True)
     vehicle_number = models.CharField(max_length=20, null=True)
 

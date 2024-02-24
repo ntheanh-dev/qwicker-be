@@ -1,11 +1,10 @@
 import json
 import secrets
 import string
-
 import vnpay
 from django.db import transaction, IntegrityError
 from django.db.models import Prefetch, Q, FilteredRelation
-from django.http import HttpResponse
+from django.http import HttpResponse,JsonResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
 from .paginator import *
@@ -40,21 +39,66 @@ class BasicUserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         else:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], detail=False, url_path='sent-otp')
-    def sent_otp(self, request):
-        if request.data.get('email') and request.data.get('first_name'):
-            otp = random.randint(1000, 9999)
-            receiver = request.data.get('email')
-            first_name = request.data.get('first_name')
-            send_otp.delay(receiver, otp, first_name)
-            cache.set(receiver, str(otp), 60 * 3)
-            return Response({}, status=status.HTTP_200_OK)
-        else:
-            return Response({'Email and first_name are required '}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class AccountViewSet(viewsets.ViewSet):
     queryset = User.objects.all()
+
+    @action(methods=['POST'], detail=False, url_path='user/register')
+    def register_user(self, request):
+        try:
+            data = request.data
+            avatar = data.get('avatar')
+            res = cloudinary.uploader.upload(avatar, folder='avatar_user/')
+            new_user = User.objects.create_user(
+                first_name=data.get('first_name'),
+                last_name=data.get('last_name'),
+                username=data.get('username'),
+                email=data.get('email'),
+                password=data.get('password'),
+                avatar=res['secure_url'],
+                role=BasicUser.Roles.BASIC_USER
+            )
+            return Response(data=BasicUserSerializer(new_user, context={'request': request}).data,status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return Response({'error': 'Error creating user'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(methods=['POST'], detail=False, url_path='shipper/register')
+    def register_shipper(self, request):
+        try:
+            with transaction.atomic():
+                data = request.data
+                avatar = data.get('avatar')
+                res = cloudinary.uploader.upload(avatar, folder='avatar_user/')
+
+                new_user = User.objects.create_user(
+                    first_name=data.get('first_name'),
+                    last_name=data.get('last_name'),
+                    username=data.get('username'),
+                    email=data.get('email'),
+                    password=data.get('password'),
+                    avatar=res['secure_url'],
+                    role=BasicUser.Roles.SHIPPER,
+                    verified=False
+                )
+
+                cmnd = data.get('cmnd')
+                cmnd_file = cloudinary.uploader.upload(cmnd, folder='cmnd/')
+
+                ShipperMore.objects.create(
+                    user_id=new_user.id,
+                    cmnd = cmnd_file['secure_url'],
+                    vehicle_id=data.get('vehicle_id'),
+                    vehicle_number=data.get('vehicle_number')
+
+                )
+
+                return Response(data=ShipperSerializer(new_user, context={'request': request}).data,
+                                status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            return Response({'error': 'Error creating user'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     @action(methods=['post'], detail=False, url_path='change-password')
     def change_password(self, request):
@@ -88,9 +132,7 @@ class AccountViewSet(viewsets.ViewSet):
         if request.data.get('email') and request.data.get('otp'):
             email = request.data.get('email')
             otp = request.data.get('otp')
-            print(otp)
             cache_otp = cache.get(email)
-            print(cache_otp)
             if cache_otp:
                 if cache_otp == otp:
                     return Response({'Email is valid'}, status=status.HTTP_200_OK)
@@ -113,6 +155,33 @@ class AccountViewSet(viewsets.ViewSet):
         else:
             return Response({'Email and new password are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['post'], detail=False, url_path='check-account')
+    def check_account(self, request):
+        email = request.data.get('email')
+        username = request.data.get('username')
+        if email and username:
+            account = User.objects.filter(username=username).first()
+            if account:
+                return JsonResponse({'mess': 'username already existed','code': '01'})
+            account = User.objects.filter(email=email).first()
+            if account:
+                return JsonResponse({'mess': 'email already existed', 'code': '02'})
+            return JsonResponse({'mess':' info given valid','code':'00'})
+        else:
+            return Response({'Email and username are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['post'], detail=False, url_path='register/sent-otp')
+    def sent_otp_to_new_email(self, request):
+        email = request.data.get('email')
+        username = request.data.get('username')
+        if email and username:
+            otp = random.randint(1000, 9999)
+            send_otp.delay(email, otp, username)
+            cache.set(email, str(otp), 60 * 3)
+            return Response({}, status=status.HTTP_200_OK)
+        else:
+            return Response({'Email and username are required '}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Shipper.objects.all()
@@ -126,29 +195,9 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
                 for k, v in request.data.items():
                     setattr(u, k, v)
                 u.save()
-            return Response(ShipperWithRatingSerializer(u, context={'request': request}).data,
-                            status=status.HTTP_200_OK)
+            return Response(ShipperWithRatingSerializer(u, context={'request': request}).data,status=status.HTTP_200_OK)
         else:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
-
-    def create(self, request, *args, **kwargs):
-        data = request.data
-        basic_account_info = {key: data.getlist(key) if len(data.getlist(key)) > 1 else data[key] for key in data}
-        selected_fields = ['cmnd', 'vehicle_id', 'vehicle_number']
-        additional_info = {key: basic_account_info.pop(key) for key in selected_fields}
-        with transaction.atomic():
-            try:
-                basic_account_info['verified'] = False
-                s = ShipperSerializer(data=basic_account_info)
-                s.is_valid(raise_exception=True)
-                s_instance = s.save()
-
-                additional_info['user_id'] = s_instance.id
-                ShipperMore.objects.create(**additional_info)
-                return Response(ShipperSerializer(s_instance).data, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                print(e)
-                return Response({'invalid fields were sent'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShipperMoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
