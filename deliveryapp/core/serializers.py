@@ -23,6 +23,17 @@ class ShipperSerializer(ModelSerializer):
             'role': {'read_only': True},
         }
 
+    def to_representation(self, instance):
+
+        # Customize the representation of the serialized data here
+        representation = super().to_representation(instance)
+        try:
+            representation['more'] = ShipperMoreSerializer(instance=instance.more).data
+        except AttributeError:
+            pass
+
+        return representation
+
 
 class VehicleSerializer(ModelSerializer):
     class Meta:
@@ -145,7 +156,7 @@ class ShipperWithRatingSerializer(ShipperSerializer):
 
     class Meta:
         model = Shipper
-        fields = ['id', 'first_name', 'last_name', 'avatar',  'email', 'rating','verified']
+        fields = ['id', 'first_name', 'last_name', 'avatar', 'email', 'rating', 'verified']
 
 
 class JobSerializer(ModelSerializer):

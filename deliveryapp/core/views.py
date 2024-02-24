@@ -231,48 +231,40 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
     permission_classes = [BasicUserOwnerJob]
 
     def create(self, request, *args, **kwargs):
-        cleaned_data = {}
-        for key, value in request.POST.items():
-            # Split the keys on '[' and ']'
-            keys = key.split('[')
-            keys = [key.rstrip(']') for key in keys]
-
-            # Recursive function to set the nested values in the dictionary
-            def set_nested_value(dictionary, keys, value):
-                if len(keys) == 1:
-                    dictionary[keys[0]] = value
-                else:
-                    if keys[0] not in dictionary:
-                        dictionary[keys[0]] = {}
-                    set_nested_value(dictionary[keys[0]], keys[1:], value)
-
-            set_nested_value(cleaned_data, keys, value)
+        data = request.data
         try:
             with transaction.atomic():
-                # Product
-                res = cloudinary.uploader.upload(cleaned_data['product']['image'], folder='product/')
-                cleaned_data['product']['image'] = res['secure_url']
-                product = Product.objects.create(**cleaned_data['product'])
+                shipment_data = json.loads(data.get('shipment'))
+                pick_up = shipment_data.pop('pick_up')
+                delivery_address = shipment_data.pop('delivery_address')
                 # Address
-                pick_up = Address.objects.create(**cleaned_data['pick_up'])
+                pick_up = Address.objects.create(**pick_up)
                 # Address
-                delivery_address = Address.objects.create(**cleaned_data['delivery_address'])
+                delivery_address = Address.objects.create(**delivery_address)
                 # Shipment
-                shipment_data = cleaned_data['shipment']
                 shipment_data['pick_up_id'] = pick_up.id
                 shipment_data['delivery_address_id'] = delivery_address.id
                 shipment = Shipment.objects.create(**shipment_data)
+
+                # Product
+                prod_data = json.loads(data.get('product'))
+                res = cloudinary.uploader.upload(prod_data['image'], folder='product/')
+                prod_data['image'] = res['secure_url']
+                product = Product.objects.create(**prod_data)
+
                 # Payment
-                cleaned_data['payment']['is_poster_pay'] = bool(cleaned_data['payment']['is_poster_pay'].lower())
-                payment = Payment.objects.create(**cleaned_data['payment'])
-                payment_method_id = int(cleaned_data['payment']['method_id'])
+                payment_data = json.loads(data.get('payment'))
+                payment = Payment.objects.create(**payment_data)
+                payment_method_id = int(payment_data['method_id'])
                 cash_payment_method_id = PaymentMethod.objects.filter(name__icontains='Tiền mặt').first().id
+
                 # Job
-                job = cleaned_data['order']
+                job = json.loads(data.get('order'))
                 job['poster_id'] = request.user.id
                 job['product_id'] = product.id
                 job['payment_id'] = payment.id
                 job['shipment_id'] = shipment.id
+
                 #
                 job_instance = Job.objects.create(**job)
                 if payment_method_id != cash_payment_method_id:

@@ -119,6 +119,9 @@ CACHES = {
         }
     }
 }
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = None
+
 # Celery
 CELERY_BROKER_URL = "amqp://guest:guest@localhost:5672//"
 CELERY_TIMEZONE = "Asia/Ho_Chi_Minh"
@@ -176,11 +179,10 @@ INTERNAL_IPS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import cloudinary
-
 cloudinary.config(
-    cloud_name=os.getenv("cloud_name"),
-    api_key=os.getenv("api_key"),
-    api_secret=os.getenv("api_secret"),
+    cloud_name="dqpo9h5s2",
+    api_key="247473939561997",
+    api_secret="lZZWOntBPCDWEnECsmWIalOtl08",
     secure=True
 )
 AUTHENTICATION_BACKENDS = (
