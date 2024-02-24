@@ -60,7 +60,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    # 'core.middleware.ProvideClientIdAndClinetSecret',
+    'core.middleware.ProvideClientIdAndClinetSecret',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -190,7 +190,9 @@ AUTHENTICATION_BACKENDS = (
     # Django
     'django.contrib.auth.backends.ModelBackend',
 )
-
+#oauth2 toolkit
+OAUTH2_TOOLKIT_CLIENT_ID = 'RiYOr07gNa0xh6dbcnQKySftZ8KHnip88Cps9Jk8'
+OAUTH2_TOOLKIT_CLIENT_SECRET = 'et1xaPdvN7jDXyPLN45Axnbj1irvoHjItxJUwqXA42Pnd5fevezK96118PvwHgw5wFr9fLOwz985lW4eRkTk6VdHsj8zLbdHHiPGt0csWlqbNEGdvkRgTKS3CaWyxPPE'
 # Google configuration
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "297909054584-ec2ra6tq46trk2gvj9ubqsf1rq20q335.apps.googleusercontent.com"
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "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"

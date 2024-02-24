@@ -250,6 +250,8 @@ class JobViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView,
         try:
             with transaction.atomic():
                 # Product
+                res = cloudinary.uploader.upload(cleaned_data['product']['image'], folder='product/')
+                cleaned_data['product']['image'] = res['secure_url']
                 product = Product.objects.create(**cleaned_data['product'])
                 # Address
                 pick_up = Address.objects.create(**cleaned_data['pick_up'])

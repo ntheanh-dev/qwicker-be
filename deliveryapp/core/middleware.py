@@ -9,10 +9,10 @@ class ProvideClientIdAndClinetSecret(MiddlewareMixin):
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.method == 'POST' and request.path == '/o/token/':
+        if request.method == 'POST' and (request.path == '/auth/token/' or request.path == '/auth/convert-token/'):
             post_data = request.POST.copy()
-            post_data['client_id'] = settings.CLIENT_ID
-            post_data['client_secret'] = settings.CLIENT_SECRET
+            post_data['client_id'] = settings.OAUTH2_TOOLKIT_CLIENT_ID
+            post_data['client_secret'] = settings.OAUTH2_TOOLKIT_CLIENT_SECRET
 
             new_querydict = QueryDict('', mutable=True)
             new_querydict.update(post_data)
