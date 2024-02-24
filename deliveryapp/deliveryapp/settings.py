@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -124,13 +126,13 @@ CELERY_TASK_TRACK_STARTED = True
 
 # SMTP Settings
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_USE_TLS = True
-EMAIL_PORT = 587
-EMAIL_HOST_USER = 'theanhmgt1011@gmail.com'
-EMAIL_HOST_PASSWORD = 'bsvy rugn jkke hbgg'
-DEFAULT_FROM_EMAIL = 'Celery Testing | TheCodeSpace <abc@gmail.com>'
+EMAIL_PORT = os.getenv("EMAIL_PORT")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -176,9 +178,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import cloudinary
 
 cloudinary.config(
-    cloud_name="dqpo9h5s2",
-    api_key="247473939561997",
-    api_secret="lZZWOntBPCDWEnECsmWIalOtl08",
+    cloud_name=os.getenv("cloud_name"),
+    api_key=os.getenv("api_key"),
+    api_secret=os.getenv("api_secret"),
     secure=True
 )
 AUTHENTICATION_BACKENDS = (
@@ -191,11 +193,11 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 #oauth2 toolkit
-OAUTH2_TOOLKIT_CLIENT_ID = 'RiYOr07gNa0xh6dbcnQKySftZ8KHnip88Cps9Jk8'
-OAUTH2_TOOLKIT_CLIENT_SECRET = 'et1xaPdvN7jDXyPLN45Axnbj1irvoHjItxJUwqXA42Pnd5fevezK96118PvwHgw5wFr9fLOwz985lW4eRkTk6VdHsj8zLbdHHiPGt0csWlqbNEGdvkRgTKS3CaWyxPPE'
+OAUTH2_TOOLKIT_CLIENT_ID = os.getenv("OAUTH2_TOOLKIT_CLIENT_ID")
+OAUTH2_TOOLKIT_CLIENT_SECRET = os.getenv("OAUTH2_TOOLKIT_CLIENT_SECRET")
 # Google configuration
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "297909054584-ec2ra6tq46trk2gvj9ubqsf1rq20q335.apps.googleusercontent.com"
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "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"
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
 
 # Define SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE to get extra permissions from Google.
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
@@ -204,7 +206,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 ]
 
 # Vnpay configuration
-VNPAY_TMN_CODE = 'Q2L9DE6D'
-VNPAY_HASH_SECRET_KEY = 'IDKCETNVMRJOMDYZCCEEFMSJJLTRQRKX'
-VNPAY_PAYMENT_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'
-VNPAY_RETURN_URL = 'http://192.168.1.207:8000/vnpay/payment_return/'
+VNPAY_TMN_CODE = os.getenv("VNPAY_TMN_CODE")
+VNPAY_HASH_SECRET_KEY = os.getenv("VNPAY_HASH_SECRET_KEY")
+VNPAY_PAYMENT_URL = os.getenv("VNPAY_PAYMENT_URL")
+VNPAY_RETURN_URL = os.getenv("VNPAY_RETURN_URL")

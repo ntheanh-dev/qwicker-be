@@ -65,6 +65,7 @@ pygame==2.1.0
 Pygments==2.16.1
 PyJWT==2.8.0
 python-dateutil==2.8.2
+python-dotenv==1.0.1
 python-ipware==2.0.1
 python-jose==3.3.0
 python3-openid==3.2.0
