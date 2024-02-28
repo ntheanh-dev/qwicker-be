@@ -211,3 +211,9 @@ class FeedbackSerializer(ModelSerializer):
     class Meta:
         model = Feedback
         fields = '__all__'
+
+
+class CouponSerializer(ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = '__all__'

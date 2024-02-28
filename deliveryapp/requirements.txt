@@ -61,8 +61,6 @@ psutil==5.9.5
 pure-eval==0.2.2
 pyasn1==0.5.1
 pycparser==2.21
-pygame==2.1.0
-Pygments==2.16.1
 PyJWT==2.8.0
 python-dateutil==2.8.2
 python-dotenv==1.0.1
@@ -70,7 +68,6 @@ python-ipware==2.0.1
 python-jose==3.3.0
 python3-openid==3.2.0
 pytz==2023.3.post1
-pywin32==306
 PyYAML==6.0.1
 pyzmq==25.1.1
 redis==5.0.1
@@ -93,3 +90,5 @@ vine==5.1.0
 wcwidth==0.2.8
 wrapt==1.16.0
 zipp==3.17.0
+gunicorn==21.2.0
+uWSGI>=2.0.19.1

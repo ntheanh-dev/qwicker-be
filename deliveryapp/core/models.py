@@ -182,3 +182,10 @@ class Payment(models.Model):
 
 class PaymentMethod(models.Model):
     name = models.CharField(max_length=20)
+
+
+class Coupon(models.Model):
+    key = models.CharField(max_length=20, null=False,blank=False)
+    start_at = models.DateField()
+    end_at = models.DateField()
+    percen_discount = models.DecimalField(max_digits=3, decimal_places=0)

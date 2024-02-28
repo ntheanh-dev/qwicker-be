@@ -2,9 +2,11 @@ import json
 import secrets
 import string
 import vnpay
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction, IntegrityError
 from django.db.models import Prefetch, Q, FilteredRelation
-from django.http import HttpResponse,JsonResponse
+from django.db.models.functions import Now
+from django.http import HttpResponse, JsonResponse
 from rest_framework import viewsets, generics, permissions, parsers, status
 from .models import *
 from .paginator import *
@@ -58,7 +60,8 @@ class AccountViewSet(viewsets.ViewSet):
                 avatar=res['secure_url'],
                 role=BasicUser.Roles.BASIC_USER
             )
-            return Response(data=BasicUserSerializer(new_user, context={'request': request}).data,status=status.HTTP_201_CREATED)
+            return Response(data=BasicUserSerializer(new_user, context={'request': request}).data,
+                            status=status.HTTP_201_CREATED)
         except Exception as e:
             print(f"Error: {str(e)}")
             return Response({'error': 'Error creating user'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -87,7 +90,7 @@ class AccountViewSet(viewsets.ViewSet):
 
                 ShipperMore.objects.create(
                     user_id=new_user.id,
-                    cmnd = cmnd_file['secure_url'],
+                    cmnd=cmnd_file['secure_url'],
                     vehicle_id=data.get('vehicle_id'),
                     vehicle_number=data.get('vehicle_number')
 
@@ -98,7 +101,6 @@ class AccountViewSet(viewsets.ViewSet):
         except Exception as e:
             print(f"Error: {str(e)}")
             return Response({'error': 'Error creating user'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
     @action(methods=['post'], detail=False, url_path='change-password')
     def change_password(self, request):
@@ -162,11 +164,11 @@ class AccountViewSet(viewsets.ViewSet):
         if email and username:
             account = User.objects.filter(username=username).first()
             if account:
-                return JsonResponse({'mess': 'username already existed','code': '01'})
+                return JsonResponse({'mess': 'username already existed', 'code': '01'})
             account = User.objects.filter(email=email).first()
             if account:
                 return JsonResponse({'mess': 'email already existed', 'code': '02'})
-            return JsonResponse({'mess':' info given valid','code':'00'})
+            return JsonResponse({'mess': ' info given valid', 'code': '00'})
         else:
             return Response({'Email and username are required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -183,7 +185,7 @@ class AccountViewSet(viewsets.ViewSet):
             return Response({'Email and username are required '}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
+class ShipperViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.CreateAPIView):
     queryset = Shipper.objects.all()
     serializer_class = ShipperSerializer
 
@@ -195,28 +197,28 @@ class ShipperViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
                 for k, v in request.data.items():
                     setattr(u, k, v)
                 u.save()
-            return Response(ShipperWithRatingSerializer(u, context={'request': request}).data,status=status.HTTP_200_OK)
+            return Response(ShipperWithRatingSerializer(u, context={'request': request}).data,
+                            status=status.HTTP_200_OK)
         else:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ShipperMoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
+class ShipperMoreViewSet(viewsets.ViewSet):
     queryset = ShipperMore.objects.all()
     serializer_class = ShipperMoreSerializer
 
 
-class VehicleViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class VehicleViewSet(viewsets.ViewSet):
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
 
 
-class ProductViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class ProductViewSet(viewsets.ViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    parser_classes = [parsers.MultiPartParser, ]
 
 
-class ProductCategoryViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class ProductCategoryViewSet(viewsets.ViewSet):
     queryset = ProductCategory.objects.all()
     serializer_class = ProductCategorySerializer
 
@@ -442,12 +444,12 @@ class ShipperJobViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             return Response({"job is not in waiting shipper state"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ShipmentViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class ShipmentViewSet(viewsets.ViewSet):
     queryset = Shipment.objects.all()
     serializer_class = ShipmentSerializer
 
 
-class AddressViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class AddressViewSet(viewsets.ViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
 
@@ -473,12 +475,12 @@ class PaymentViewSet(viewsets.ViewSet):
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PaymentMethodViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class PaymentMethodViewSet(viewsets.ViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
 
 
-class AuctionViewSet(viewsets.ViewSet, viewsets.ModelViewSet):
+class AuctionViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = Auction.objects.all()
     serializer_class = AuctionSerializer
 
@@ -526,5 +528,29 @@ class FeedbackViewSet(viewsets.ViewSet, generics.ListAPIView):
                 return Response(self.serializer_class(feedback).data, status=status.HTTP_200_OK)
             else:
                 return Response({}, status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+class CouponViewSet(viewsets.ViewSet):
+    queryset = Coupon.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(methods=['post'], detail=False, url_path='my-coupon')
+    def my_feedback(self, request):
+        key = request.data.get('key')
+        if key:
+            coupon = Coupon.objects.filter(key=key)
+            if coupon.exists():
+                coupon = coupon.filter(end_at__gt=Now())
+                if coupon.exists():
+                    coupon = coupon.first()
+                    return JsonResponse(
+                        {'mess': 'The coupon is still valid.', 'code': '01', 'discount': coupon.percen_discount},
+                        encoder=DjangoJSONEncoder)
+                else:
+                    return JsonResponse({'mess': 'The object has expired', 'code': '02'})
+            else:
+                return JsonResponse({'mess': 'coupon not found', 'code': '00'})
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)

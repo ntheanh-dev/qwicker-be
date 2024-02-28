@@ -20,6 +20,7 @@ r.register('payments', views.PaymentViewSet)
 r.register('payment-method', views.PaymentMethodViewSet)
 r.register('feedbacks', views.FeedbackViewSet)
 r.register('account',views.AccountViewSet)
+r.register('coupon',views.CouponViewSet)
 urlpatterns = [
     path('', include(r.urls))
 ]

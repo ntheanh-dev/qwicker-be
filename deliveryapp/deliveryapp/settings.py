@@ -24,16 +24,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-$%mc73f9gx!bbif37ks3h00sc9%b$l88g(=!j)r6z=m*w)7d1-'
 
 CKEDITOR_UPLOAD_PATH = "images/"
-MEDIA_ROOT = '%s/core/static/' % BASE_DIR
+# MEDIA_ROOT = '%s/core/static/' % BASE_DIR
 CORS_ORIGIN_ALLOW_ALL = True
 # LOGIN_URL='/admin/login/'
 AUTH_USER_MODEL = 'core.User'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['web','127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['https://*.mydomain.com','https://127.0.0.1:8000','http://127.0.0.1:8000']
 
 # Application definition
+
+STATIC_URL = '/static/static/'
+MEDIA_URL = '/media/media/'
+
+STATIC_ROOT = '/vol/web/static'
+MEDIA_ROOT = '/vol/web/media'
 
 INSTALLED_APPS = [
     'core.apps.CoreConfig',
@@ -104,10 +111,11 @@ WSGI_APPLICATION = 'deliveryapp.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'deliverydb',
-        'USER': 'root',
-        'PASSWORD': 'Admin@123',
-        'HOST': ''  # mặc định localhost
+        'NAME': os.environ.get("MYSQL_DATABASE","deliverydb"),
+        'USER': os.environ.get("MYSQL_USER","root"),
+        'PASSWORD': os.environ.get("MYSQL_PASSWORD","Admin@123"),
+        'HOST': os.environ.get("MYSQL_HOST"),
+        'PORT': os.environ.get("DB_PORT",3306),
     }
 }
 CACHES = {
@@ -123,9 +131,16 @@ CACHES = {
 DATA_UPLOAD_MAX_MEMORY_SIZE = None
 
 # Celery
-CELERY_BROKER_URL = "amqp://guest:guest@localhost:5672//"
+# CELERY_BROKER_URL = "amqp://guest:guest@localhost:5672//"
+# CELERY_TIMEZONE = "Asia/Ho_Chi_Minh"
+# CELERY_TASK_TRACK_STARTED = True
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_BACKEND_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_TIMEZONE = "Asia/Ho_Chi_Minh"
 CELERY_TASK_TRACK_STARTED = True
+
 
 # SMTP Settings
 
@@ -169,7 +184,6 @@ USE_TZ = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = '/static/'
 # setting for debug toolbar
 INTERNAL_IPS = [
     '127.0.0.1'

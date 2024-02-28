@@ -1,19 +1,74 @@
 version: '3.8'
 
 services:
+  db:
+    build: docker/mysql
+    container_name: db
+    volumes:
+      - data-volume:/var/lib/mysql
+    restart: always
+    ports:
+      - ":3306"
+    env_file:
+      - ./deliveryapp/.ENV
+    healthcheck:
+      test: "exit 0"
+    networks:
+      - live
+
+  web:
+    build: 
+      context: deliveryapp/
+    container_name: web
+    restart: on-failure:10 
+    volumes:
+      - static-data:/vol/web
+    expose:
+      - '8000'
+    env_file:
+      - ./deliveryapp/.ENV
+    depends_on:
+      - db
+    networks:
+      - live
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "8000:8000"
+    volumes:
+      - static-data:/vol/static
+      - ./docker/myconfig:/etc/nginx/conf.d
+    depends_on:
+      - web
+    networks:
+      - live
+
+
   redis:
     image: redis
-    container_name: my-redis
+    container_name: redis
+    restart: always
     ports:
       - "6379:6379"
+    networks:
+      - live
 
-  rabbitmq:
-    image: rabbitmq:3.12.12-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - '8080:15672'
-#    environment:
-#      - "RABBITMQ_DEFAULT_PASS=Admin@123"
-#      - "RABBITMQ_DEFAULT_USER=admin"
-#      - "RABBITMQ_DEFAULT_VHOST='vhost'"
+  celery:
+    build: 
+      context: deliveryapp/
+    command: celery -A deliveryapp worker -l info --pool=solo
+    depends_on:
+      - redis
+      - web
+    networks:
+      - live
+
+volumes:
+  data-volume: {}
+  static-data: {}
+
+networks:
+  live:
+    driver: bridge
