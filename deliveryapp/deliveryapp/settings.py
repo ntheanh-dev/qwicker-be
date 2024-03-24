@@ -21,7 +21,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-$%mc73f9gx!bbif37ks3h00sc9%b$l88g(=!j)r6z=m*w)7d1-'
+# SECRET_KEY = 'django-insecure-$%mc73f9gx!bbif37ks3h00sc9%b$l88g(=!j)r6z=m*w)7d1-'
+# set variables
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", 'django-insecure-$%mc73f9gx!bbif37ks3h00sc9%b$l88g(=!j)r6z=m*w)7d1-'
+)
 
 CKEDITOR_UPLOAD_PATH = "images/"
 # MEDIA_ROOT = '%s/core/static/' % BASE_DIR
@@ -29,11 +33,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 # LOGIN_URL='/admin/login/'
 AUTH_USER_MODEL = 'core.User'
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", True)
 
-ALLOWED_HOSTS = ['web','127.0.0.1']
+ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = ['https://*.mydomain.com','https://127.0.0.1:8000','http://127.0.0.1:8000']
-
 # Application definition
 
 STATIC_URL = '/static/static/'
@@ -141,7 +144,6 @@ CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_TIMEZONE = "Asia/Ho_Chi_Minh"
 CELERY_TASK_TRACK_STARTED = True
 
-
 # SMTP Settings
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
@@ -194,9 +196,9 @@ INTERNAL_IPS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import cloudinary
 cloudinary.config(
-    cloud_name="dqpo9h5s2",
-    api_key="247473939561997",
-    api_secret="lZZWOntBPCDWEnECsmWIalOtl08",
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("API_KEY"),
+    api_secret=os.getenv("API_SECRET"),
     secure=True
 )
 AUTHENTICATION_BACKENDS = (
