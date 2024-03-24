@@ -33,7 +33,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 # LOGIN_URL='/admin/login/'
 AUTH_USER_MODEL = 'core.User'
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", True)
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = ['https://*.mydomain.com','https://127.0.0.1:8000','http://127.0.0.1:8000']

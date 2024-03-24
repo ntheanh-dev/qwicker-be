@@ -13,9 +13,10 @@ COPY requirements.txt  requirements.txt
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ENV PATH="/py/bin:$PATH"
+ENV PATH="/py/bin:$PATH"
 
 COPY . .
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py collectstatic --no-input;python manage.py makemigrations;  python manage.py migrate; gunicorn deliveryapp.wsgi -b 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py wait_db;python manage.py collectstatic --no-input;python manage.py makemigrations;python manage.py migrate;python manage.py runserver 0.0.0.0:8000"]
+# CMD ["sh", "-c", "python manage.py wait_db;python manage.py collectstatic --no-input;python manage.py makemigrations;  python manage.py migrate; gunicorn deliveryapp.wsgi -b 127.0.0.1:8000"]

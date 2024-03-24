@@ -95,12 +95,12 @@ class ProductCategory(models.Model):
 
 class Job(BaseModel):
     class Status(models.TextChoices):
-        FINDING_SHIPPER = 1,
-        WAITING_SHIPPER = 2
-        WAITING_PAY = 3
-        SHIPPING = 4
-        DONE = 5
-        CANCELED = 6
+        FINDING_SHIPPER = '1',
+        WAITING_SHIPPER = '2'
+        WAITING_PAY = '3'
+        SHIPPING = '4'
+        DONE = '5'
+        CANCELED = '6'
 
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.FINDING_SHIPPER)
     uuid = models.UUIDField(default=uuid.uuid4(), editable=False)

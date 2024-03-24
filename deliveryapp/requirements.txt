@@ -92,3 +92,4 @@ wrapt==1.16.0
 zipp==3.17.0
 gunicorn==21.2.0
 uWSGI>=2.0.19.1
+psycopg2==2.9.9

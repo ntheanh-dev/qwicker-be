@@ -23,8 +23,8 @@ services:
     restart: on-failure:10 
     volumes:
       - static-data:/vol/web
-    expose:
-      - '8000'
+    ports:
+      - '8000:8000'
     env_file:
       - ./deliveryapp/.ENV
     depends_on:
@@ -32,18 +32,18 @@ services:
     networks:
       - live
 
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
-    ports:
-      - "8000:8000"
-    volumes:
-      - static-data:/vol/static
-      - ./docker/myconfig:/etc/nginx/conf.d
-    depends_on:
-      - web
-    networks:
-      - live
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: nginx
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - static-data:/vol/static
+  #     - ./docker/myconfig:/etc/nginx/conf.d
+  #   depends_on:
+  #     - web
+  #   networks:
+  #     - live
 
 
   redis:
