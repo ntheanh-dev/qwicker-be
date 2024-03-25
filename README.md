@@ -12,14 +12,14 @@ Qwicker backend is a comprehensive RESTful API backend designed to support appli
 For a comprehensive user interface to interact with the Qwicker backend, check out my React Native client application repository [here](https://github.com/Theanhmgt/qwicker-reactnative-frontend).
 
 ## Table of contents
-* 🏛️[Architecture diagram](#🏛️architecture-diagram)
-* 🏛️[Database schema diagram](#🏛️database-schema-diagram)
-* 🛠️[Prerequisites](#🛠️prerequisites)
-* 🚀[Getting Started](#🚀getting-started)
-* 📊[Admin site](#📊admin-site)
-* 🔧[Configure Environment Variables](#🔧configure-environment-variables-not-needed-for-basic-project-execution)
-* 🔗[References](#🔗references)
-* 📧[Contact](#📧contact)
+* 🏛️[Architecture diagram](#architecture-diagram)
+* 🏛️[Database schema diagram](#database-schema-diagram)
+* 🛠️[Prerequisites](#prerequisites)
+* 🚀[Getting Started](#getting-started)
+* 📊[Admin site](#admin-site)
+* 🔧[Configure Environment Variables](#configure-environment-variables-not-needed-for-basic-project-execution)
+* 🔗[References](#references)
+* 📧[Contact](#contact)
 ## Tasks
 
 - **User Management**: Users can log in with roles such as admin, shipper, and regular user.
