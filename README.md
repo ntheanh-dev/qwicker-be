@@ -7,9 +7,8 @@
 
 # Qwicker Backend
 
-Qwicker backend is a comprehensive RESTful API backend designed to support applications for fast item delivery services, similar to Lalamove. Qwicker is a powerful Django-based RESTful API backend designed to support applications for fast item delivery services, similar to Lalamove. Qwicker offers a wide range of features including user management, job registration, auction systems, system administration, and detailed data analytics
-
-For a comprehensive user interface to interact with the Qwicker backend, check out my React Native client application repository [here](https://github.com/Theanhmgt/qwicker-reactnative-frontend).
+The Qwicker backend project is centered around providing a robust RESTful API designed to support applications for fast item delivery services, similar to Lalamove. It is built with cutting-edge technologies like Django, Django REST Framework, Redis, Celery, and more. Qwicker backend offers a wide range of features including authentication by Oauth2, role-based access control, user and shipper registration, an admin dashboard, shipper profile viewing, item posting, auction and shipper selection, rating and feedback systems, order management and notification, online payment integration with VNPay, and system administration functionalities.
+For a comprehensive user interface to interact with the Qwicker backend, check out my React Native client application repository [here](https://github.com/Theanhmgt/qwicker-reactnative-frontend) or view full demo on YouTube by clicking on the link provided [here](https://www.youtube.com/watch?v=GISC5GFzDdM).
 
 ## Table of contents
 * 🏛️[Architecture diagram](#architecture-diagram)
