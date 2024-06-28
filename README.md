@@ -38,7 +38,7 @@ For a comprehensive demo, you can watch the full video on YouTube by clicking on
 
 ## 🏛️Architecture diagram
 
-![](/readme/img/architecture.png)
+![](/readme/img/architecture2.png)
 
 ## 🏛️Database schema diagram
 
