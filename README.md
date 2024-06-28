@@ -14,14 +14,14 @@ For a comprehensive demo, you can watch the full video on YouTube by clicking on
 
 ## Table of contents
 
-- 🏛️[Architecture diagram](#🏛️architecture-diagram)
-- 🏛️[Database schema diagram](#🏛️database-schema-diagram)
-- 🛠️[Prerequisites](#🛠️prerequisites)
-- 🚀[Getting Started](#🚀getting-started)
-- 📊[Admin Interface](#📊admin-interface)
-- 🔧[Configure Environment Variables](#🔧configure-environment-variables-not-needed-for-basic-project-execution)
-- 🔗[References](#🔗references)
-- 📧[Contact](#📧contact)
+- 🏛️[Architecture diagram](#architecture-diagram)
+- 🏛️[Database schema diagram](#database-schema-diagram)
+- 🛠️[Prerequisites](#prerequisites)
+- 🚀[Getting Started](#getting-started)
+- 📊[Admin Interface](#admin-interface)
+- 🔧[Configure Environment Variables](#configure-environment-variables-not-needed-for-basic-project-execution)
+- 🔗[References](#references)
+- 📧[Contact](#contact)
 
 ## Tasks
 
